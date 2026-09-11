@@ -1,3 +1,4 @@
+#include <iostream>
 #include "raylib.h"
 
 #include "imgui.h"
@@ -7,12 +8,17 @@ int main()
 {
     constexpr int screen_width = 1280;
     constexpr int screen_height = 800;
+    const int FPS = 60;
+    constexpr float FIXED_DT = 1.0f / static_cast<float>(FPS);
+    float accumulator = 0.0f;
+
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
     InitWindow(screen_width, screen_height, "Open PhysX");
-    SetTargetFPS(60);
+    SetTargetFPS(FPS);
 
     rlImGuiSetup(true);
+    RenderTexture2D viewportTarget = LoadRenderTexture(800, 600);
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -32,8 +38,15 @@ int main()
 
     while (!WindowShouldClose())
     {
-        if (!io.WantCaptureMouse)
-            UpdateCamera(&camera, CAMERA_ORBITAL);
+
+        UpdateCamera(&camera, CAMERA_ORBITAL);
+
+        accumulator += GetFrameTime();
+        while (accumulator >= FIXED_DT)
+        {
+            // world.Step(FIXED_DT);   <-- don't ask me what is world . it will exist in a while
+            accumulator -= FIXED_DT;
+        }
 
         const Color background{
             static_cast<unsigned char>(clear_color[0] * 255.0f),
@@ -42,23 +55,40 @@ int main()
             255,
         };
 
+        BeginTextureMode(viewportTarget);
+            BeginMode3D(camera);
+                ClearBackground(background);
+                    DrawGrid(10, 1.0f);
+                    DrawCube({0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f, DARKBLUE);
+                    DrawCubeWires({0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f, SKYBLUE);
+            EndMode3D();
+        EndTextureMode();
+
         BeginDrawing();
-        ClearBackground(background);
-
-        BeginMode3D(camera);
-        DrawGrid(10, 1.0f);
-        DrawCube({0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f, DARKBLUE);
-        DrawCubeWires({0.0f, 1.0f, 0.0f}, 2.0f, 2.0f, 2.0f, SKYBLUE);
-        EndMode3D();
-
-        DrawFPS(12, 12);
+        ClearBackground(BLACK);
 
         rlImGuiBegin();
+
+
 
         if (show_demo)
             ImGui::ShowDemoWindow(&show_demo);
 
         ImGui::Begin("Open PhysX");
+        if ( ImGui::BeginTabBar("Workspace")) {
+            if (ImGui::BeginTabItem("Viewport")) {
+                ImVec2 renderSize = ImGui::GetContentRegionAvail();
+                rlImGuiImageRenderTexture(&viewportTarget);
+
+                ImGui::EndTabItem();
+            }
+            if (ImGui::BeginTabItem("Settings")) {
+                ImGui::Text("Put your configuration sliders here!");
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
         ImGui::Text("raylib %s", RAYLIB_VERSION);
         ImGui::Text("Dear ImGui %s", IMGUI_VERSION);
         ImGui::Text("FPS: %d", GetFPS());
@@ -70,8 +100,10 @@ int main()
 
         rlImGuiEnd();
         EndDrawing();
-    }
 
+    } // main loop
+
+    UnloadRenderTexture(viewportTarget);
     rlImGuiShutdown();
     CloseWindow();
     return 0;
