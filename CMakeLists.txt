@@ -82,8 +82,18 @@ set_target_properties(rlImGui PROPERTIES
 # -----------------------------------------------------------------------------
 # Application
 # -----------------------------------------------------------------------------
-add_executable(${PROJECT_NAME} src/main.cpp)
+set(OPENPHYSX_SOURCES
+    src/main.cpp
+    src/Application.cpp
+    src/logic/Simulation.cpp
+    src/renderer/Renderer.cpp
+    src/ui/Workspace.cpp
+)
+
+add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "src" FILES ${OPENPHYSX_SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     $<$<CONFIG:Debug>:OPENPHYSX_DEBUG=1>
