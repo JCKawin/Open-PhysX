@@ -1,0 +1,248 @@
+<mxfile host="drawio-plugin" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" modified="2026-09-14T10:01:36.678Z" version="22.1.22" etag="iPm7ahy9edhllObzQJs_" type="embed" pages="3">
+  <diagram id="pt-matrix" name="Platform matrix">
+    <mxGraphModel dx="845" dy="995" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1700" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t" value="&lt;b&gt;Run everywhere — platform matrix&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;fontSize=18;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="40" y="20" width="1620" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="s" value="Solid green = works with current CMake. Amber = stub or plausible with raylib. Dashed orange = target product surface." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#555555;" parent="1" vertex="1">
+          <mxGeometry x="40" y="56" width="1620" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="h0" value="&lt;b&gt;Target&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="40" y="110" width="180" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="h1" value="&lt;b&gt;Window / input&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="230" y="110" width="220" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="h2" value="&lt;b&gt;Graphics&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="460" y="110" width="220" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="h3" value="&lt;b&gt;Compute&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="690" y="110" width="250" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="h4" value="&lt;b&gt;Status now&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="950" y="110" width="200" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="h5" value="&lt;b&gt;To ship&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="110" width="500" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="w0" value="&lt;b&gt;Windows&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;" parent="1" vertex="1">
+          <mxGeometry x="40" y="170" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w1" value="GLFW via raylib&lt;br&gt;Win32 window" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="230" y="170" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w2" value="OpenGL 3.3+" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="460" y="170" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w3" value="CPU + GPU" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;" parent="1" vertex="1">
+          <mxGeometry x="690" y="170" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w4" value="Primary dev target" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="950" y="170" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="w5" value="MSVC + ClangCI · optional DX12/Vulkan later" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="170" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l0" value="&lt;b&gt;Linux&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;" parent="1" vertex="1">
+          <mxGeometry x="40" y="260" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="X11 / Wayland via GLFW" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="230" y="260" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="OpenGL 3.3+" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="460" y="260" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="CPU + GPU + TPU" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;" parent="1" vertex="1">
+          <mxGeometry x="690" y="260" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="Should build (raylib)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="950" y="260" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="CI ubuntu-latest · Vulkan compute later" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="260" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m0" value="&lt;b&gt;macOS&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;" parent="1" vertex="1">
+          <mxGeometry x="40" y="350" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="Cocoa (already linked)" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="230" y="350" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="OpenGL (legacy) / Metal later" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;" parent="1" vertex="1">
+          <mxGeometry x="460" y="350" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="CPU + GPU + NPU" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;" parent="1" vertex="1">
+          <mxGeometry x="690" y="350" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" value="Frameworks in CMake" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" parent="1" vertex="1">
+          <mxGeometry x="950" y="350" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" value="CI macos-latest · MoltenVK or Metal backend" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="350" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e0" value="&lt;b&gt;Web&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="40" y="440" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="browser canvas&lt;br&gt;ASYNCIFY" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="230" y="440" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="WebGL today&lt;br&gt;WebGPU target" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="460" y="440" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="WASM SIMD + WebGPU" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="690" y="440" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="link flags only" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;" parent="1" vertex="1">
+          <mxGeometry x="950" y="440" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="emcmake · .html/.wasm artifact · no Fetch at runtime" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="440" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld0" value="&lt;b&gt;Headless&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="40" y="530" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld1" value="no window" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="230" y="530" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld2" value="null renderer" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="460" y="530" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld3" value="all cores + GPU compute" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="690" y="530" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld4" value="not present" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F8CECC;strokeColor=#B85450;" parent="1" vertex="1">
+          <mxGeometry x="950" y="530" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="hld5" value="libopenphysx_core + CLI  ·  CI batch tests" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="530" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a0" value="&lt;b&gt;Android / iOS&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="40" y="620" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" value="raylib mobile later" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="230" y="620" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" value="GLES / Metal" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="460" y="620" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" value="CPU first" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="690" y="620" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" value="out of scope v1" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="950" y="620" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" value="Do not block desktop/web/headless on this" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="620" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n" value="&lt;b&gt;Rule:&lt;/b&gt; the solver (logic/) must compile for every row. Only adapters change. That is why ISimulation already forbids GPU types. Close the IRenderer leak before adding rows." style="shape=note;whiteSpace=wrap;html=1;size=16;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=8;fontSize=11;fontFamily=Helvetica;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#1A1A1A;" parent="1" vertex="1">
+          <mxGeometry x="40" y="730" width="1620" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pt-stack" name="Backend stack">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t" value="&lt;b&gt;Portable runtime stack — target layering&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1520" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="s" value="Each layer has one job. Swap boxes horizontally without rewriting the solver. Dashed = not implemented." style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="56" width="1520" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="prod" value="&lt;b&gt;Products&lt;/b&gt;   Desktop workstation   ·   Browser demo   ·   Headless CLI / library" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="1520" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="app" value="&lt;b&gt;Application / shell&lt;/b&gt;&lt;br&gt;frame graph · docking UI · settings · project files" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="170" width="1520" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="rt" value="&lt;b&gt;Runtime kernel&lt;/b&gt;&lt;br&gt;hardware probe · job system · time · logging · allocators" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="1520" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="simc" value="&lt;b&gt;ISimulation&lt;/b&gt;&lt;br&gt;world · step · seek" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#DAE8FC;strokeColor=#6C8EBF;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="360" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="giz" value="&lt;b&gt;IRenderer&lt;/b&gt;&lt;br&gt;opaque viewport" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="360" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="io" value="&lt;b&gt;IPlatform&lt;/b&gt;&lt;br&gt;window · files · input" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="800" y="360" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp" value="&lt;b&gt;ICompute&lt;/b&gt;&lt;br&gt;dispatch kernels" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F8CECC;strokeColor=#B85450;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="360" width="390" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cpu1" value="&lt;b&gt;CPU scalar&lt;/b&gt;&lt;br&gt;NOW" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="480" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cpu2" value="&lt;b&gt;CPU SIMD jobs&lt;/b&gt;&lt;br&gt;TARGET" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="220" y="480" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="gl" value="&lt;b&gt;raylib GL&lt;/b&gt;&lt;br&gt;NOW" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="430" y="480" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wgpu" value="&lt;b&gt;WebGPU / VK / Metal&lt;/b&gt;&lt;br&gt;TARGET" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="600" y="480" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="nullr" value="&lt;b&gt;Null renderer&lt;/b&gt;&lt;br&gt;TARGET" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="430" y="570" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="glfw" value="&lt;b&gt;GLFW / raylib&lt;/b&gt;&lt;br&gt;NOW" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="800" y="480" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="emb" value="&lt;b&gt;Emscripten&lt;/b&gt;&lt;br&gt;STUB" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="970" y="480" width="170" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cli" value="&lt;b&gt;stdio + files&lt;/b&gt;&lt;br&gt;TARGET" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="800" y="570" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cnull" value="&lt;b&gt;CPU fallback&lt;/b&gt;&lt;br&gt;always" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="480" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cgpu" value="&lt;b&gt;GPU compute&lt;/b&gt;&lt;br&gt;TARGET" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="480" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="w" value="&lt;b&gt;Do not take CUDA as the only compute path.&lt;/b&gt; CUDA = NVIDIA workstations only, which breaks ‘everywhere’. Keep a CPU SIMD backend always. Add GPU via Vulkan/Metal/DX12/WebGPU (portable). Optionally add CUDA/HIP as extra ICompute implementations for labs." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="670" width="1520" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n" value="&lt;b&gt;Headless is a first-class product&lt;/b&gt; — not an afterthought. Same Simulation, Null renderer, stdio platform. That is how CI and batch sims saturate every core without a GPU context." style="shape=note;whiteSpace=wrap;html=1;size=16;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=8;fontSize=11;fontFamily=Helvetica;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="780" width="1520" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="pt-deploy" name="Build &amp; deploy">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t" value="&lt;b&gt;Build matrix, packaging, and CI — target&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1520" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="presets" value="&lt;b&gt;CMake presets (add)&lt;/b&gt;&lt;br&gt;dev-debug — sanitizers, asserts&lt;br&gt;rel-native — -O3 /O2, native ISA (local only)&lt;br&gt;rel-portable — x86-64-v2 or armv8 baseline&lt;br&gt;web-release — emcmake, -sWASM, SIMD&lt;br&gt;headless — OPENPHYSX_HEADLESS, no raylib window" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="500" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="ci" value="&lt;b&gt;CI matrix (add)&lt;/b&gt;&lt;br&gt;windows-latest  MSVC + ClangCL&lt;br&gt;ubuntu-latest  gcc + clang&lt;br&gt;macos-latest  AppleClang&lt;br&gt;emscripten  web artifact&lt;br&gt;one job with ASan/UBSan on Linux" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="560" y="110" width="480" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="pkg" value="&lt;b&gt;Ship artifacts&lt;/b&gt;&lt;br&gt;zip / tar of the executable + licenses&lt;br&gt;web: .html + .wasm + .js + .data&lt;br&gt;optional: libopenphysx_core for embedding&lt;br&gt;GPL-3: Corresponding Source with binaries" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="110" width="500" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="feat" value="&lt;b&gt;Feature flags&lt;/b&gt;&lt;br&gt;OPENPHYSX_SIMD  OPENPHYSX_JOBS&lt;br&gt;OPENPHYSX_GPU_VK  OPENPHYSX_GPU_WGPU&lt;br&gt;OPENPHYSX_CUDA  (optional extra)&lt;br&gt;OPENPHYSX_HEADLESS  OPENPHYSX_UI" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="350" width="500" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="isa" value="&lt;b&gt;ISA dispatch (max hardware, still portable)&lt;/b&gt;&lt;br&gt;Ship a portable baseline binary.&lt;br&gt;At runtime, probe AVX2 / AVX-512 / NEON / WASM SIMD and pick a kernel table.&lt;br&gt;Do not require users to recompile for their CPU unless they want -march=native." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="560" y="350" width="500" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="web" value="&lt;b&gt;Web specifics&lt;/b&gt;&lt;br&gt;Already: USE_GLFW, ASYNCIFY, WASM&lt;br&gt;Add: ALLOW_MEMORY_GROWTH, SIMD128,&lt;br&gt;pthread if COOP/COEP headers available,&lt;br&gt;or a single-thread job fake on constrained hosts." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="350" width="500" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="n" value="&lt;b&gt;FetchContent vs vendoring for ‘everywhere’&lt;/b&gt;&lt;br&gt;First configure needs the network today. For reproducible everywhere-builds: pin tarball hashes, or vendor raylib/rlImGui like ImGui, or provide a --offline cache. CI should use a pinned cache." style="shape=note;whiteSpace=wrap;html=1;size=16;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=8;fontSize=11;fontFamily=Helvetica;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="550" width="1520" height="90" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

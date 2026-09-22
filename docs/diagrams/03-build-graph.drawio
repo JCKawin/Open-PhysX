@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" agent="Open-PhysX docs" version="24.7.17" type="device">
+  <diagram id="bd-deps" name="Dependencies">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="&lt;b&gt;CMake build graph&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1520" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="s" value="CMake ≥ 3.25  ·  C++20  ·  C11  ·  BUILD_SHARED_LIBS OFF  ·  compile_commands.json ON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="40" y="56" width="1520" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="cm" value="&lt;b&gt;CMakeLists.txt&lt;/b&gt;&lt;br&gt;project Open_PhysX 0.1.0" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="fc" value="&lt;b&gt;FetchContent&lt;/b&gt;&lt;br&gt;if package not found" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="360" y="110" width="240" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="ray" value="&lt;b&gt;raylib 6.0&lt;/b&gt;&lt;br&gt;find_package QUIET&lt;br&gt;else tarball from GitHub&lt;br&gt;EXCLUDE_FROM_ALL" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="280" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="im" value="&lt;b&gt;imgui STATIC&lt;/b&gt;&lt;br&gt;external/imgui/*.cpp&lt;br&gt;imgui_demo included&lt;br&gt;PIC ON · C++20" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="360" y="230" width="280" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="rl" value="&lt;b&gt;rlImGui STATIC&lt;/b&gt;&lt;br&gt;git Raylib_6_0 shallow&lt;br&gt;rlImGui.cpp only&lt;br&gt;links imgui + raylib" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="680" y="230" width="280" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="app" value="&lt;b&gt;executable Open_PhysX&lt;/b&gt;&lt;br&gt;main.cpp Application.cpp&lt;br&gt;logic/Simulation.cpp&lt;br&gt;renderer/Renderer.cpp&lt;br&gt;ui/Workspace.cpp" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="230" width="320" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="link" value="&lt;b&gt;target_link_libraries&lt;/b&gt;&lt;br&gt;PRIVATE rlImGui" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="410" width="320" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="defs" value="&lt;b&gt;Compile definitions&lt;/b&gt;&lt;br&gt;Debug: OPENPHYSX_DEBUG=1&lt;br&gt;not Debug: NDEBUG&lt;br&gt;MSVC: NOMINMAX WIN32_LEAN_AND_MEAN" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="300" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="warns" value="&lt;b&gt;Warnings&lt;/b&gt;&lt;br&gt;MSVC: /W4 /permissive- /utf-8&lt;br&gt;else: -Wall -Wextra -Wpedantic" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="360" y="400" width="300" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="apple" value="&lt;b&gt;if(APPLE)&lt;/b&gt;&lt;br&gt;IOKit · Cocoa&lt;br&gt;OpenGL · QuartzCore" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#B1DDF0;strokeColor=#368087;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="680" y="400" width="280" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="em" value="&lt;b&gt;if(EMSCRIPTEN or PLATFORM=Web)&lt;/b&gt;&lt;br&gt;suffix .html&lt;br&gt;-sUSE_GLFW=3 -sASYNCIFY&lt;br&gt;-sASSERTIONS=1 -sWASM=1&lt;br&gt;-sGL_ENABLE_GET_PROC_ADDRESS=1" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="400" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="n" value="&lt;b&gt;Already a portability hook&lt;/b&gt;&lt;br&gt;The Emscripten block is the start of ‘run in a browser’. It is not a full product path yet (assets, filesystem, SIMD flags, WebGPU). See 04-portability.drawio." style="shape=note;whiteSpace=wrap;html=1;size=16;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=8;fontSize=11;fontFamily=Helvetica;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="470" y="560" width="520" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="w" value="&lt;b&gt;Not in the graph yet&lt;/b&gt;&lt;br&gt;No CTest, no sanitizer presets, no CMakePresets.json, no install() rules, no shared lib for the solver. Those belong in the portability work." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="560" width="300" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cm" target="fc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fc" target="ray">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="cm" target="im">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="fc" target="rl">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="ray" target="rl">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="im" target="rl">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="public link" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="rl" target="app">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="app" target="link">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="bd-flow" name="Configure and run">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="t" value="&lt;b&gt;Configure → build → run (today)&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#303030;strokeColor=#1D1D1D;fontColor=#F2F2F2;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1520" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="s" value="&lt;b&gt;cmake -S . -B build&lt;/b&gt;&lt;br&gt;Ninja or VS generator" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#FFE6CC;strokeColor=#D79B00;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="300" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="d" value="&lt;b&gt;Fetch raylib + rlImGui&lt;/b&gt;&lt;br&gt;into build/_deps&lt;br&gt;compile static .a / .lib" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#F5F5F5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="380" y="120" width="320" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="b" value="&lt;b&gt;cmake --build build&lt;/b&gt;&lt;br&gt;Open_PhysX.exe / binary" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="740" y="120" width="300" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="r" value="&lt;b&gt;run executable&lt;/b&gt;&lt;br&gt;creates imgui.ini in CWD" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="120" width="280" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="ign" value="&lt;b&gt;.gitignore&lt;/b&gt;&lt;br&gt;.idea/ .vs/ .vscode/&lt;br&gt;cmake-build-*/ build/ out/&lt;br&gt;CMakeUserPresets.json imgui.ini *.user" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="250" width="300" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="ide" value="&lt;b&gt;Observed local trees&lt;/b&gt;&lt;br&gt;build/ — ninja&lt;br&gt;cmake-build-debug/ — CLion Debug&lt;br&gt;cmake-build-release/ — CLion Release&lt;br&gt;Do not commit these." style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#1A1A1A;strokeWidth=1.5;arcSize=10;fillColor=#E6E6E6;strokeColor=#888888;align=left;spacingLeft=10;spacingRight=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="380" y="250" width="360" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="n" value="&lt;b&gt;Minimum machine to run today&lt;/b&gt;&lt;br&gt;C++20 compiler, CMake 3.25, OpenGL 3.3-class GPU, network on first configure (FetchContent). No CUDA, no Vulkan SDK, no Python runtime required for the app itself." style="shape=note;whiteSpace=wrap;html=1;size=16;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;spacingRight=8;fontSize=11;fontFamily=Helvetica;fillColor=#FFF2CC;strokeColor=#D6B656;fontColor=#1A1A1A;" vertex="1" parent="1">
+          <mxGeometry x="780" y="250" width="580" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="s" target="d">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="d" target="b">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeWidth=1.5;strokeColor=#4D4D4D;fontSize=11;fontColor=#333333;labelBackgroundColor=#FFFFFF;" edge="1" parent="1" source="b" target="r">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
