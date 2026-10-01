@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ui/Editor.h"
+
 #include "imgui.h"
 
 namespace openphysx {
@@ -10,14 +12,6 @@ class IRenderer;
 class Workspace
 {
 public:
-    enum class Tool
-    {
-        Select,
-        Move,
-        Rotate,
-        Scale,
-    };
-
     void init();
     void draw(ISimulation& simulation, IRenderer& renderer);
 
@@ -44,7 +38,11 @@ private:
     bool show_metrics_ = false;
     bool vsync_ = true;
     int target_fps_ = 60;
-    Tool tool_ = Tool::Select;
+    bool view_ticked_ = false;
+    bool euler_active_ = false;
+    Vec3 euler_cache_{};
+    SimulationState edit_before_{};
+    Editor editor_{};
 };
 
 } // namespace openphysx

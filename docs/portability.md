@@ -19,9 +19,8 @@ The current tree is a desktop OpenGL app, but several seams are already in place
 
 What is **not** portable yet:
 
-- `IRenderer.h` includes `raylib.h` (`RenderTexture2D`, `Camera3D`)
 - `Application.cpp` is hard-wired to `InitWindow` / `BeginDrawing`
-- `Workspace.cpp` calls `IsKeyPressed`, `GetFPS`, `SetWindowState` directly
+- `Workspace.cpp` and `Editor.cpp` call raylib for keys, FPS, and the window flags. `IRenderer.h` itself does not include `raylib.h`
 - First configure needs the network (FetchContent)
 - No CMake presets, no CI matrix, no headless target
 
@@ -57,8 +56,8 @@ flowchart TB
 Rules that make the diagram true:
 
 1. **`logic/` compiles with zero graphics headers.** True today. Keep it true.
-2. **`IRenderer` returns opaque viewport handles**, not `RenderTexture2D`. Not true today — close this first.
-3. **Camera is an Open PhysX type** in `core/Types.h`, converted at the backend edge the same way `Vec3` already is.
+2. **`IRenderer` does not return GPU types.** True now: the FBO is drawn by `draw_viewport_image()`, implemented only in the raylib renderer.
+3. **Camera is an Open PhysX type.** True now: `View3D` in `core/View.h` (quaternion, pivot, distance). `Renderer.cpp` turns it into `Camera3D`.
 4. **Headless is a product**, not `if (no_window) skip_draw`. Same `ISimulation`, null renderer, stdio platform. That is how CI and batch jobs saturate cores without a GPU context.
 5. **CUDA is an extra `ICompute`, never the only one.** CUDA is NVIDIA-only and cannot be the “everywhere” path. Portable GPU compute is Vulkan / Metal / D3D12 / WebGPU. CPU SIMD is the backend that always exists.
 
@@ -75,37 +74,9 @@ Rules that make the diagram true:
 
 The solver row is the same for every line. Only adapters change.
 
-## Closing the renderer leak (first portability PR)
+## Renderer contract (the leak is closed)
 
-Today:
-
-```cpp
-#include "raylib.h"
-class IRenderer {
-    virtual const RenderTexture2D& viewport_target() const = 0;
-    virtual Camera3D& camera() = 0;
-};
-```
-
-Target:
-
-```cpp
-// core/Types.h
-struct CameraState { Vec3 position, target, up; float fovy; };
-
-struct ViewportHandle {
-    std::uint32_t id = 0;   // backend-defined
-    int width = 0;
-    int height = 0;
-};
-
-class IRenderer {
-    virtual ViewportHandle viewport_target() const = 0;
-    virtual CameraState& camera() = 0;
-};
-```
-
-`Workspace` then blits through a small backend helper (`rlImGuiImageRenderTexture` stays in a raylib-only `.cpp`, not in the interface). After that, a `NullRenderer` and a future WebGPU renderer can implement the same header.
+`IRenderer.h` includes `core/View.h` only. `draw_viewport_image()` is the blit. `rlImGuiImageRenderTexture` stays in `Renderer.cpp`. A null or WebGPU renderer can implement the header. What is still raylib-shaped is the process shell (`Application` window loop, key polling in `Editor`), not the camera math.
 
 `Application` should also stop being the window. Split:
 

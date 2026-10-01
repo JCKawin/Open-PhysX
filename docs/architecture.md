@@ -35,12 +35,14 @@ flowchart TB
 | --- | --- | --- |
 | `src/main.cpp` | Process entry. Constructs `Application` and returns `run()`. | `Application.h` only |
 | `src/Application.h/.cpp` | Window, ImGui bootstrap, fixed-step loop, ownership | raylib, rlImGui, the three subsystems |
-| `src/core/Types.h` | POD math and `SimulationState` | nothing else |
+| `src/core/Types.h` | POD math, `Quat`, `RigidBody`, `SimulationState` | nothing else |
+| `src/core/Math.h` / `View.h` | Quat, turntable view, project, zoom-to-cursor | `Types.h` only |
 | `src/logic/ISimulation.h` | Logic contract | `core/Types.h` only |
 | `src/logic/Simulation.h/.cpp` | Timeline + demo motion | `ISimulation` |
 | `src/renderer/IRenderer.h` | Render contract | **currently `raylib.h` — leak** |
 | `src/renderer/Renderer.h/.cpp` | FBO, orbit camera, `DrawCube` | `ISimulation`, raylib |
-| `src/ui/Workspace.h/.cpp` | Dockspace, menus, property panels | `ISimulation`, `IRenderer`, ImGui, raylib for input/FPS |
+| `src/ui/Workspace.h/.cpp` | Dockspace, menus, property panels | `ISimulation`, `IRenderer`, ImGui, raylib for FPS |
+| `src/ui/Editor.h/.cpp` | Keymap, modal operators, undo stack | `ISimulation`, `IRenderer`, raylib keys |
 
 Dependency direction that must hold as the project grows:
 
@@ -75,15 +77,14 @@ Implemented by `Simulation`. `step` is a no-op unless `state().playing`. When pl
 init() / shutdown()
 set_viewport_size(w, h)          // recreates FBO when size changes
 render(const ISimulation&)
-viewport_target() const          // RenderTexture2D
-update_camera(viewport_hovered)
-reset_camera()
-camera()                         // Camera3D
+draw_viewport_image()            // blit. The FBO stays inside Renderer
+view()                           // View3D in core/View.h
+reset_view()
+tick_view(dt)                    // smooth axis snaps and frame
+orbit / pan / zoom_at / set_axis / toggle_projection / orbit_step / frame_bounds
 ```
 
-Implemented by `Renderer` (non-copyable). `init` loads a 16×16 placeholder FBO; the viewport panel resizes it to the ImGui content region every frame. Camera is yaw / pitch / distance around a target, not raylib’s built-in free camera.
-
-**Contract leak:** `IRenderer.h` includes `raylib.h` and returns `RenderTexture2D` / `Camera3D`. A Vulkan, WebGPU, or null renderer cannot implement this header. Closing that leak is a prerequisite for [portability.md](portability.md). Move camera into `core/Types.h` and make the viewport an opaque handle (`id + width + height`).
+Implemented by `Renderer` (non-copyable). `init` loads a 16×16 placeholder FBO; the viewport panel resizes it to the ImGui content region every frame. `IRenderer.h` does not include `raylib.h`. The camera is a `View3D`: quaternion, orbit pivot (`ofs` is the negative of the pivot), distance, perspective or orthographic. The raylib `Camera3D` is built only inside `Renderer.cpp`. Navigation is turntable orbit (yaw around world up, pitch around camera right, elevation clamped), pan, and zoom-to-cursor. Numpad axis views and frame-all slerp over about 0.18 s.
 
 ### `Workspace`
 
@@ -144,9 +145,11 @@ All shared types are in `src/core/Types.h`.
 | Type | Fields | Defaults |
 | --- | --- | --- |
 | `Vec3` | `x y z` | `0,0,0` |
+| `Quat` | `x y z w` | identity `0,0,0,1` |
 | `Rgb` | `r g b` plus `data()` for ImGui | `0.12, 0.12, 0.14` |
-| `RigidBody` | `position`, `size`, `color` | pos `(0,1,0)`, size `(2,2,2)`, blue |
-| `SimulationState` | time, duration, speed, playing, loop, grid, demo motion, clear color, cube | duration 10 s, loop on, demo motion on |
+| `RigidBody` | `position`, `size`, `rotation`, `color` | pos `(0,1,0)`, size `(2,2,2)`, identity rotation, blue |
+| `SimulationState` | time, duration, speed, playing, loop, grid, demo motion, clear color, cube, `cube_visible`, `cube_selected` | duration 10 s, loop on, demo motion on, cube visible and selected |
+| `View3D` | `viewquat`, `ofs`, `dist`, `fovy_deg`, `ortho_height`, clip, projection, axis | eye `(4,4,4)` looking at `(0,1,0)`, 45° |
 
 The renderer converts at the edge: `Vec3` → `Vector3`, `Rgb` → `Color` (clamped 0–1 to 0–255), plus a lighter `wire_color` for `DrawCubeWires`.
 
@@ -165,12 +168,14 @@ Default dock (from `Workspace::apply_default_layout`):
 
 | Panel | What it actually does |
 | --- | --- |
-| Viewport | Resize FBO, orbit/pan/zoom **only while hovered**, `Renderer::render`, blit, FPS overlay. Help text: RMB orbit, Shift+RMB pan, wheel zoom. |
-| Properties | Cube pose/size/color, world clear/grid/demo, camera FOV (eye/target widgets are read-only), session versions |
-| Animation Player | Seek 0 / play-pause / stop / seek end / loop / timeline / duration / speed |
-| Tools | Tool enum Select/Move/Rotate/Scale (**not wired to gizmos**), grid/demo checkboxes, reset buttons |
+| Viewport | Resize FBO, keymap navigation while hovered, `Renderer::render`, blit, FPS overlay. Default mouse: RMB orbit, Shift+RMB pan, Ctrl+RMB zoom, wheel zoom-to-cursor. Numpad 1/3/7 axis views, Numpad 5 persp/ortho, Home frame all. |
+| Properties | Cube pose (position, XYZ euler, size, color), visible/selected, world clear/grid/demo, camera FOV and orthographic toggle. Eye and pivot are read-only. Edits push the undo stack when the widget deactivates. |
+| Animation Player | Seek 0 / play-pause / stop / seek end / loop / timeline / duration / speed. Space toggles play when no widget is focused. |
+| Tools | Select / Move / Rotate / Scale. The same operators as `G` / `R` / `S`. A click-drag in the viewport runs the active tool. |
 
-Menu stubs (visible, `enabled = false`): File Open/Save, Edit Undo/Redo. They mark future serialization and a command stack; they are not half-implemented.
+`ui/Editor.cpp` holds the keymap tables, the modal operators, and a 64-step undo stack. Object mode is the only mode. `G` move, `R` rotate, `S` scale. `X` / `Y` / `Z` lock an axis (press again for the body's local axis). Shift is precise, Ctrl snaps, digits type a value, Enter confirms, Esc cancels. `H` hides the cube, Alt+`H` shows it, `X` hides it. Alt+`G` / `R` / `S` clear location, rotation, and scale. Ctrl+`Z` undoes, Ctrl+Shift+`Z` redoes. Transport time is kept across edit undo. Reset Simulation is a full undo step, so it restores the playhead too.
+
+File Open/Save stay disabled. There is still one cube, no mesh edit mode, and no gizmo drawn in the viewport. The tool drag and the keys edit the authored pose directly.
 
 ImGui docking and keyboard nav are on. Theme is a dark grey chrome with accent `#E89E3E` (the same orange used for “app shell” in the diagrams).
 

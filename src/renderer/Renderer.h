@@ -2,6 +2,8 @@
 
 #include "renderer/IRenderer.h"
 
+#include "raylib.h"
+
 namespace openphysx {
 
 class Renderer final : public IRenderer
@@ -16,21 +18,39 @@ public:
 
     void set_viewport_size(int width, int height) override;
     void render(const ISimulation& simulation) override;
-    const RenderTexture2D& viewport_target() const override { return target_; }
+    void draw_viewport_image() override;
 
-    void update_camera(bool viewport_hovered) override;
-    void reset_camera() override;
-    Camera3D& camera() override { return camera_; }
-    const Camera3D& camera() const override { return camera_; }
+    View3D& view() override { return view_; }
+    const View3D& view() const override { return view_; }
+    void reset_view() override;
+    void tick_view(float dt) override;
+    void cancel_view_motion() override;
+
+    void orbit(float dx_px, float dy_px) override;
+    void pan(float dx_px, float dy_px) override;
+    void zoom_at(float wheel_ticks, float ndc_x, float ndc_y, float aspect) override;
+    void set_axis(ViewAxis axis, bool smooth) override;
+    void toggle_projection() override;
+    void orbit_step(float yaw_radians, float pitch_radians, bool smooth) override;
+    void frame_bounds(Vec3 center, float radius, float aspect, bool smooth) override;
 
 private:
-    void sync_camera_position();
+    void begin_smooth(const View3D& goal);
+    void sync_camera();
+
+    struct Smooth
+    {
+        bool active = false;
+        float t = 0.0f;
+        float duration = 0.18f;
+        View3D from{};
+        View3D to{};
+    };
 
     RenderTexture2D target_{};
     Camera3D camera_{};
-    float yaw_ = 0.0f;
-    float pitch_ = 0.0f;
-    float distance_ = 6.0f;
+    View3D view_{};
+    Smooth smooth_{};
 };
 
 } // namespace openphysx

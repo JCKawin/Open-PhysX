@@ -29,7 +29,7 @@ cmake --build build
 
 The executable is `Open_PhysX` (`Open_PhysX.exe` on Windows).
 
-Viewport: RMB orbit, Shift+RMB pan, wheel zoom. `Ctrl+N` resets the simulation, `Ctrl+Q` quits.
+Viewport: RMB orbit, Shift+RMB pan, Ctrl+RMB zoom, wheel zoom. Numpad 1/3/7 snap the view, Numpad 5 toggles orthographic, Home frames the cube. `G` / `R` / `S` move, rotate, and scale. `Ctrl+Z` undoes. `Ctrl+N` resets the simulation, `Ctrl+Q` quits. Settings → Mouse can switch orbit to the middle button.
 
 ## License
 

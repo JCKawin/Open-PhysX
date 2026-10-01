@@ -88,6 +88,7 @@ set(OPENPHYSX_SOURCES
     src/logic/Simulation.cpp
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
+    src/ui/Editor.cpp
 )
 
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})

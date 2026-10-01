@@ -26,6 +26,13 @@ ImVec4 rgba(int r, int g, int b, int a = 255)
     return ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
 }
 
+void reset_simulation(Editor& editor, ISimulation& simulation)
+{
+    const SimulationState before = simulation.state();
+    simulation.reset();
+    editor.commit_edit(simulation, before, true);
+}
+
 } // namespace
 
 void Workspace::init()
@@ -108,9 +115,16 @@ void Workspace::apply_theme()
 
 void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
 {
+    editor_.begin_frame(simulation.state());
+    const ImGuiIO& io = ImGui::GetIO();
+    editor_.handle_app(simulation, io.WantTextInput, ImGui::IsAnyItemFocused(), quit_requested_);
+
     draw_menu_bar(simulation, renderer);
     draw_dockspace();
+    view_ticked_ = false;
     draw_viewport(simulation, renderer);
+    if (!view_ticked_)
+        renderer.tick_view(GetFrameTime());
     draw_properties(simulation, renderer);
     draw_animation_player(simulation);
     draw_tools(simulation, renderer);
@@ -123,22 +137,13 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
 
 void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
 {
-    const ImGuiIO& io = ImGui::GetIO();
-    const bool ctrl = io.KeyCtrl;
-    const bool want_text = io.WantTextInput;
-
-    if (!want_text && ctrl && IsKeyPressed(KEY_Q))
-        quit_requested_ = true;
-    if (!want_text && ctrl && IsKeyPressed(KEY_N))
-        simulation.reset();
-
     if (!ImGui::BeginMainMenuBar())
         return;
 
     if (ImGui::BeginMenu("File"))
     {
         if (ImGui::MenuItem("New Simulation", "Ctrl+N"))
-            simulation.reset();
+            reset_simulation(editor_, simulation);
         ImGui::MenuItem("Open...", nullptr, false, false);
         ImGui::MenuItem("Save...", nullptr, false, false);
         ImGui::Separator();
@@ -149,13 +154,15 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
 
     if (ImGui::BeginMenu("Edit"))
     {
-        ImGui::MenuItem("Undo", "Ctrl+Z", false, false);
-        ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, false);
+        if (ImGui::MenuItem("Undo", "Ctrl+Z", false, editor_.can_undo()))
+            editor_.undo(simulation);
+        if (ImGui::MenuItem("Redo", "Ctrl+Shift+Z", false, editor_.can_redo()))
+            editor_.redo(simulation);
         ImGui::Separator();
         if (ImGui::MenuItem("Reset Simulation"))
-            simulation.reset();
+            reset_simulation(editor_, simulation);
         if (ImGui::MenuItem("Reset Camera"))
-            renderer.reset_camera();
+            renderer.reset_view();
         ImGui::EndMenu();
     }
 
@@ -209,6 +216,15 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
             ImGui::EndMenu();
         }
 
+        ImGui::Separator();
+        if (ImGui::BeginMenu("Mouse"))
+        {
+            if (ImGui::MenuItem("Open PhysX (RMB orbit)", nullptr, editor_.mouse == MousePreset::OpenPhysX))
+                editor_.mouse = MousePreset::OpenPhysX;
+            if (ImGui::MenuItem("Blender (MMB orbit)", nullptr, editor_.mouse == MousePreset::Blender))
+                editor_.mouse = MousePreset::Blender;
+            ImGui::EndMenu();
+        }
         ImGui::Separator();
         ImGui::MenuItem("Show Grid", nullptr, &simulation.state().show_grid);
         ImGui::MenuItem("Demo Motion", nullptr, &simulation.state().demo_motion);
@@ -291,12 +307,30 @@ void Workspace::draw_viewport(ISimulation& simulation, IRenderer& renderer)
         renderer.set_viewport_size(static_cast<int>(size.x), static_cast<int>(size.y));
 
         const bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-        renderer.update_camera(hovered);
+        const ImVec2 overlay = ImGui::GetCursorScreenPos();
+        const ImVec2 mouse = ImGui::GetMousePos();
+        ViewportSample sample;
+        sample.hovered = hovered;
+        sample.dx = GetMouseDelta().x;
+        sample.dy = GetMouseDelta().y;
+        sample.wheel = GetMouseWheelMove();
+        sample.width = std::max(size.x, 1.0f);
+        sample.height = std::max(size.y, 1.0f);
+        sample.aspect = sample.width / sample.height;
+        sample.local_x = mouse.x - overlay.x;
+        sample.local_y = mouse.y - overlay.y;
+        sample.ndc_x = (sample.local_x / sample.width) * 2.0f - 1.0f;
+        sample.ndc_y = 1.0f - (sample.local_y / sample.height) * 2.0f;
+
+        const bool text_input = ImGui::GetIO().WantTextInput;
+        const bool widget_active = ImGui::GetActiveID() != 0;
+        editor_.handle_viewport(simulation, renderer, sample, text_input, widget_active);
+        renderer.tick_view(GetFrameTime());
+        view_ticked_ = true;
         renderer.render(simulation);
 
-        const ImVec2 overlay = ImGui::GetCursorScreenPos();
         if (size.x > 1.0f && size.y > 1.0f)
-            rlImGuiImageRenderTexture(&renderer.viewport_target());
+            renderer.draw_viewport_image();
 
         ImDrawList* draw_list = ImGui::GetWindowDrawList();
         char fps[32];
@@ -305,7 +339,40 @@ void Workspace::draw_viewport(ISimulation& simulation, IRenderer& renderer)
         draw_list->AddText(
             ImVec2(overlay.x + 10.0f, overlay.y + 24.0f),
             IM_COL32(200, 200, 200, 160),
-            "RMB orbit  ·  Shift+RMB pan  ·  Wheel zoom");
+            editor_.nav_help());
+
+        char status[160];
+        editor_.status_line(status, static_cast<int>(sizeof(status)));
+        if (status[0] != '\0')
+        {
+            draw_list->AddText(
+                ImVec2(overlay.x + 10.0f, overlay.y + 42.0f),
+                IM_COL32(232, 158, 62, 230),
+                status);
+        }
+
+        const char* axis = view_axis_name(renderer.view().view);
+        const char* projection =
+            renderer.view().projection == ViewProjection::Orthographic ? "Ortho" : "Persp";
+        char view_label[64];
+        std::snprintf(view_label, sizeof(view_label), "Object   %s   %s", axis, projection);
+        draw_list->AddText(
+            ImVec2(overlay.x + 10.0f, overlay.y + size.y - 22.0f),
+            IM_COL32(200, 200, 200, 180),
+            view_label);
+
+        if (editor_.box_visible())
+        {
+            float x0 = 0.0f;
+            float y0 = 0.0f;
+            float x1 = 0.0f;
+            float y1 = 0.0f;
+            editor_.box_rect(x0, y0, x1, y1);
+            const ImVec2 a(overlay.x + std::min(x0, x1), overlay.y + std::min(y0, y1));
+            const ImVec2 b(overlay.x + std::max(x0, x1), overlay.y + std::max(y0, y1));
+            draw_list->AddRectFilled(a, b, IM_COL32(232, 158, 62, 40));
+            draw_list->AddRect(a, b, IM_COL32(232, 158, 62, 230));
+        }
     }
 
     ImGui::End();
@@ -324,35 +391,71 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
     }
 
     SimulationState& state = simulation.state();
-    Camera3D& camera = renderer.camera();
+    View3D& view = renderer.view();
+
+    auto arm_edit = [&]() {
+        if (ImGui::IsItemActivated())
+            edit_before_ = editor_.frame_state();
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            editor_.commit_edit(simulation, edit_before_, false);
+    };
 
     if (ImGui::CollapsingHeader("Cube", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::Checkbox("Visible", &state.cube_visible);
+        arm_edit();
+        ImGui::Checkbox("Selected", &state.cube_selected);
         ImGui::DragFloat3("Position", &state.cube.position.x, 0.05f);
+        arm_edit();
+        if (!euler_active_)
+        {
+            const Vec3 euler = quat_to_euler_xyz(state.cube.rotation);
+            euler_cache_ = {rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z)};
+        }
+        if (ImGui::DragFloat3("Rotation", &euler_cache_.x, 1.0f))
+            state.cube.rotation = quat_from_euler_xyz(
+                {deg_to_rad(euler_cache_.x), deg_to_rad(euler_cache_.y), deg_to_rad(euler_cache_.z)});
+        euler_active_ = ImGui::IsItemActive();
+        arm_edit();
         ImGui::DragFloat3("Size", &state.cube.size.x, 0.05f, 0.05f, 20.0f);
+        arm_edit();
         ImGui::ColorEdit3("Color", state.cube.color.data());
+        arm_edit();
     }
 
     if (ImGui::CollapsingHeader("World", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::ColorEdit3("Clear Color", state.clear_color.data());
+        arm_edit();
         ImGui::Checkbox("Show Grid", &state.show_grid);
+        arm_edit();
         ImGui::BeginDisabled(!state.show_grid);
         ImGui::SliderInt("Grid Slices", &state.grid_slices, 2, 64);
+        arm_edit();
         ImGui::DragFloat("Grid Spacing", &state.grid_spacing, 0.05f, 0.1f, 10.0f);
+        arm_edit();
         ImGui::EndDisabled();
         ImGui::Checkbox("Demo Motion", &state.demo_motion);
+        arm_edit();
     }
 
     if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::SliderFloat("FOV", &camera.fovy, 20.0f, 90.0f, "%.0f deg");
+        const Vec3 eye = view_eye(view);
+        const Vec3 pivot = view_pivot(view);
+        float eye_values[3] = {eye.x, eye.y, eye.z};
+        float pivot_values[3] = {pivot.x, pivot.y, pivot.z};
+        ImGui::SliderFloat("FOV", &view.fovy_deg, 20.0f, 90.0f, "%.0f deg");
+        bool orthographic = view.projection == ViewProjection::Orthographic;
+        if (ImGui::Checkbox("Orthographic", &orthographic))
+            renderer.toggle_projection();
         ImGui::BeginDisabled();
-        ImGui::DragFloat3("Eye", &camera.position.x);
-        ImGui::DragFloat3("Target", &camera.target.x);
+        ImGui::DragFloat3("Eye", eye_values);
+        ImGui::DragFloat3("Pivot", pivot_values);
         ImGui::EndDisabled();
+        ImGui::TextUnformatted(view_axis_name(view.view));
         if (ImGui::Button("Reset Camera", ImVec2(-1.0f, 0.0f)))
-            renderer.reset_camera();
+            renderer.reset_view();
     }
 
     if (ImGui::CollapsingHeader("Session"))
@@ -434,15 +537,17 @@ void Workspace::draw_tools(ISimulation& simulation, IRenderer& renderer)
 
     SimulationState& state = simulation.state();
 
+    ImGui::TextUnformatted("Object Mode");
     ImGui::TextUnformatted("Active Tool");
-    if (ImGui::RadioButton(ICON_FA_ARROW_POINTER "  Select", tool_ == Tool::Select))
-        tool_ = Tool::Select;
-    if (ImGui::RadioButton(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT "  Move", tool_ == Tool::Move))
-        tool_ = Tool::Move;
-    if (ImGui::RadioButton(ICON_FA_ROTATE "  Rotate", tool_ == Tool::Rotate))
-        tool_ = Tool::Rotate;
-    if (ImGui::RadioButton(ICON_FA_EXPAND "  Scale", tool_ == Tool::Scale))
-        tool_ = Tool::Scale;
+    if (ImGui::RadioButton(ICON_FA_ARROW_POINTER "  Select", editor_.tool == Tool::Select))
+        editor_.tool = Tool::Select;
+    if (ImGui::RadioButton(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT "  Move", editor_.tool == Tool::Move))
+        editor_.tool = Tool::Move;
+    if (ImGui::RadioButton(ICON_FA_ROTATE "  Rotate", editor_.tool == Tool::Rotate))
+        editor_.tool = Tool::Rotate;
+    if (ImGui::RadioButton(ICON_FA_EXPAND "  Scale", editor_.tool == Tool::Scale))
+        editor_.tool = Tool::Scale;
+    ImGui::TextWrapped("G move, R rotate, S scale. X Y Z lock an axis. Shift is precise, Ctrl snaps. Enter confirms, Esc cancels.");
 
     ImGui::Separator();
     ImGui::TextUnformatted("Display");
@@ -451,9 +556,9 @@ void Workspace::draw_tools(ISimulation& simulation, IRenderer& renderer)
 
     ImGui::Separator();
     if (ImGui::Button("Reset Simulation", ImVec2(-1.0f, 0.0f)))
-        simulation.reset();
+        reset_simulation(editor_, simulation);
     if (ImGui::Button("Reset Camera", ImVec2(-1.0f, 0.0f)))
-        renderer.reset_camera();
+        renderer.reset_view();
 
     ImGui::Separator();
     ImGui::TextWrapped("Drag a panel tab to undock it. Drop it on a dock node or the window edge to redock. Window > Reset Layout restores the default split.");

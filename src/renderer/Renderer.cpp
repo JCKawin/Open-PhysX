@@ -2,8 +2,11 @@
 
 #include "logic/ISimulation.h"
 
+#include "rlImGui.h"
+#include "rlgl.h"
+
 #include <algorithm>
-#include <cmath>
+#include <cstdio>
 
 namespace openphysx {
 namespace {
@@ -23,56 +26,44 @@ Vector3 to_vec3(const Vec3& v)
     return Vector3{v.x, v.y, v.z};
 }
 
-Color wire_color(const Rgb& rgb)
+void draw_body(const RigidBody& body, bool selected)
 {
-    return Color{
-        static_cast<unsigned char>(std::clamp(rgb.r * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
-        static_cast<unsigned char>(std::clamp(rgb.g * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
-        static_cast<unsigned char>(std::clamp(rgb.b * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
-        255,
+    Vec3 x_axis;
+    Vec3 y_axis;
+    Vec3 z_axis;
+    quat_to_axes(body.rotation, x_axis, y_axis, z_axis);
+
+    const float matrix[16] = {
+        x_axis.x, x_axis.y, x_axis.z, 0.0f,
+        y_axis.x, y_axis.y, y_axis.z, 0.0f,
+        z_axis.x, z_axis.y, z_axis.z, 0.0f,
+        body.position.x, body.position.y, body.position.z, 1.0f,
     };
-}
 
-constexpr float kPi = 3.14159265358979323846f;
-
-Vector3 vec3_sub(Vector3 a, Vector3 b)
-{
-    return Vector3{a.x - b.x, a.y - b.y, a.z - b.z};
-}
-
-Vector3 vec3_add(Vector3 a, Vector3 b)
-{
-    return Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
-}
-
-Vector3 vec3_scale(Vector3 v, float s)
-{
-    return Vector3{v.x * s, v.y * s, v.z * s};
-}
-
-Vector3 vec3_cross(Vector3 a, Vector3 b)
-{
-    return Vector3{
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x,
-    };
-}
-
-Vector3 vec3_normalize(Vector3 v)
-{
-    const float length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (length <= 1e-8f)
-        return Vector3{0.0f, 0.0f, 0.0f};
-    return vec3_scale(v, 1.0f / length);
+    rlPushMatrix();
+    rlMultMatrixf(matrix);
+    DrawCube({0.0f, 0.0f, 0.0f}, body.size.x, body.size.y, body.size.z, to_color(body.color));
+    const Color wire = selected ? Color{232, 158, 62, 255}
+                                : Color{
+                                      static_cast<unsigned char>(std::clamp(body.color.r * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      static_cast<unsigned char>(std::clamp(body.color.g * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      static_cast<unsigned char>(std::clamp(body.color.b * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      255,
+                                  };
+    DrawCubeWires({0.0f, 0.0f, 0.0f}, body.size.x, body.size.y, body.size.z, wire);
+    rlPopMatrix();
 }
 
 } // namespace
 
 void Renderer::init()
 {
+    const int fails = view_self_check();
+    if (fails != 0)
+        std::fprintf(stderr, "view_self_check: %d checks failed\n", fails);
+
     target_ = LoadRenderTexture(16, 16);
-    reset_camera();
+    reset_view();
 }
 
 void Renderer::shutdown()
@@ -98,65 +89,132 @@ void Renderer::set_viewport_size(int width, int height)
     target_ = LoadRenderTexture(width, height);
 }
 
-void Renderer::reset_camera()
+void Renderer::reset_view()
 {
-    camera_.target = {0.0f, 1.0f, 0.0f};
-    camera_.up = {0.0f, 1.0f, 0.0f};
-    camera_.fovy = 45.0f;
-    camera_.projection = CAMERA_PERSPECTIVE;
-    distance_ = std::sqrt(41.0f);
-    yaw_ = kPi / 4.0f;
-    pitch_ = std::asin(3.0f / distance_);
-    sync_camera_position();
+    view_ = {};
+    view_look_at(view_, {0.0f, 1.0f, 0.0f}, {4.0f, 4.0f, 4.0f}, {0.0f, 1.0f, 0.0f});
+    view_match_ortho_scale(view_);
+    smooth_ = {};
 }
 
-void Renderer::sync_camera_position()
+void Renderer::cancel_view_motion()
 {
-    const float cp = std::cos(pitch_);
-    camera_.position = {
-        camera_.target.x + distance_ * cp * std::sin(yaw_),
-        camera_.target.y + distance_ * std::sin(pitch_),
-        camera_.target.z + distance_ * cp * std::cos(yaw_),
-    };
+    smooth_.active = false;
 }
 
-void Renderer::update_camera(bool viewport_hovered)
+void Renderer::begin_smooth(const View3D& goal)
 {
-    if (!viewport_hovered)
+    smooth_.from = view_;
+    smooth_.to = goal;
+    smooth_.t = 0.0f;
+    smooth_.active = true;
+    view_.projection = goal.projection;
+    view_.view = goal.view;
+}
+
+void Renderer::tick_view(float dt)
+{
+    if (!smooth_.active)
         return;
 
-    const Vector2 mouse_delta = GetMouseDelta();
-    const float wheel = GetMouseWheelMove();
-    const bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    const bool rotating =
-        !shift && (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE));
-    const bool panning =
-        shift && (IsMouseButtonDown(MOUSE_BUTTON_RIGHT) || IsMouseButtonDown(MOUSE_BUTTON_MIDDLE));
+    smooth_.t += std::max(dt, 0.0f);
+    const float u = std::min(smooth_.t / smooth_.duration, 1.0f);
+    const float s = u * u * (3.0f - 2.0f * u);
+    view_.viewquat = quat_slerp(smooth_.from.viewquat, smooth_.to.viewquat, s);
+    view_.ofs = vec_lerp(smooth_.from.ofs, smooth_.to.ofs, s);
+    view_.dist = smooth_.from.dist + (smooth_.to.dist - smooth_.from.dist) * s;
+    view_.ortho_height = smooth_.from.ortho_height + (smooth_.to.ortho_height - smooth_.from.ortho_height) * s;
+    view_.fovy_deg = smooth_.to.fovy_deg;
+    view_.projection = smooth_.to.projection;
+    view_.view = smooth_.to.view;
+    if (u >= 1.0f)
+        smooth_.active = false;
+}
 
-    if (rotating)
+void Renderer::orbit(float dx_px, float dy_px)
+{
+    if (dx_px == 0.0f && dy_px == 0.0f)
+        return;
+    cancel_view_motion();
+    view_orbit(view_, -dx_px * 0.005f, dy_px * 0.005f);
+}
+
+void Renderer::pan(float dx_px, float dy_px)
+{
+    if (dx_px == 0.0f && dy_px == 0.0f)
+        return;
+    cancel_view_motion();
+    view_pan(view_, dx_px, dy_px);
+}
+
+void Renderer::zoom_at(float wheel_ticks, float ndc_x, float ndc_y, float aspect)
+{
+    if (wheel_ticks == 0.0f)
+        return;
+    cancel_view_motion();
+    view_zoom_at(view_, wheel_ticks, ndc_x, ndc_y, aspect);
+}
+
+void Renderer::set_axis(ViewAxis axis, bool smooth)
+{
+    View3D goal = view_;
+    view_set_axis(goal, axis);
+    if (!smooth)
     {
-        yaw_ -= mouse_delta.x * 0.005f;
-        pitch_ += mouse_delta.y * 0.005f;
-        pitch_ = std::clamp(pitch_, -1.45f, 1.45f);
+        view_ = goal;
+        cancel_view_motion();
+        return;
     }
+    begin_smooth(goal);
+}
 
-    if (panning)
+void Renderer::toggle_projection()
+{
+    cancel_view_motion();
+    view_toggle_projection(view_);
+}
+
+void Renderer::orbit_step(float yaw_radians, float pitch_radians, bool smooth)
+{
+    View3D goal = view_;
+    view_orbit(goal, yaw_radians, pitch_radians);
+    if (!smooth)
     {
-        const float pan_speed = distance_ * 0.0015f;
-        const Vector3 forward = vec3_normalize(vec3_sub(camera_.target, camera_.position));
-        const Vector3 right = vec3_normalize(vec3_cross(forward, camera_.up));
-        const Vector3 up = vec3_cross(right, forward);
-        camera_.target = vec3_add(camera_.target, vec3_scale(right, -mouse_delta.x * pan_speed));
-        camera_.target = vec3_add(camera_.target, vec3_scale(up, mouse_delta.y * pan_speed));
+        view_ = goal;
+        cancel_view_motion();
+        return;
     }
+    begin_smooth(goal);
+}
 
-    if (wheel != 0.0f)
+void Renderer::frame_bounds(Vec3 center, float radius, float aspect, bool smooth)
+{
+    View3D goal = view_;
+    view_frame(goal, center, radius, aspect);
+    if (!smooth)
     {
-        distance_ *= (1.0f - wheel * 0.1f);
-        distance_ = std::clamp(distance_, 1.0f, 80.0f);
+        view_ = goal;
+        cancel_view_motion();
+        return;
     }
+    begin_smooth(goal);
+}
 
-    sync_camera_position();
+void Renderer::sync_camera()
+{
+    camera_.position = to_vec3(view_eye(view_));
+    camera_.target = to_vec3(view_pivot(view_));
+    camera_.up = to_vec3(view_up(view_));
+    if (view_.projection == ViewProjection::Perspective)
+    {
+        camera_.fovy = view_.fovy_deg;
+        camera_.projection = CAMERA_PERSPECTIVE;
+    }
+    else
+    {
+        camera_.fovy = view_.ortho_height;
+        camera_.projection = CAMERA_ORTHOGRAPHIC;
+    }
 }
 
 void Renderer::render(const ISimulation& simulation)
@@ -166,8 +224,9 @@ void Renderer::render(const ISimulation& simulation)
 
     const SimulationState& state = simulation.state();
     const RigidBody body = simulation.visual_body();
-    const Vector3 position = to_vec3(body.position);
-    const Vector3 size = to_vec3(body.size);
+
+    rlSetClipPlanes(view_.clip_near, view_.clip_far);
+    sync_camera();
 
     BeginTextureMode(target_);
     ClearBackground(to_color(state.clear_color));
@@ -176,11 +235,18 @@ void Renderer::render(const ISimulation& simulation)
     if (state.show_grid)
         DrawGrid(state.grid_slices, state.grid_spacing);
 
-    DrawCube(position, size.x, size.y, size.z, to_color(body.color));
-    DrawCubeWires(position, size.x, size.y, size.z, wire_color(body.color));
+    if (state.cube_visible)
+        draw_body(body, state.cube_selected);
 
     EndMode3D();
     EndTextureMode();
+}
+
+void Renderer::draw_viewport_image()
+{
+    if (target_.id == 0)
+        return;
+    rlImGuiImageRenderTexture(&target_);
 }
 
 } // namespace openphysx

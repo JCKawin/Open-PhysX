@@ -61,9 +61,9 @@ Needs: CMake ≥ 3.25, a C++20 compiler, an OpenGL 3.3-class GPU. No CUDA/Vulkan
 
 - One thread does input, step, ImGui, and GL submit.
 - There is no collision, constraint solver, or body islanding.
-- Tools (Select / Move / Rotate / Scale) are radio buttons only.
-- File Open/Save and Undo/Redo are disabled menu stubs.
-- `IRenderer.h` includes `raylib.h`, so the render contract is not portable yet.
+- Tools move, rotate, and scale the one cube. There is no viewport gizmo and no second object.
+- File Open/Save are disabled menu stubs. Undo/Redo records pose, hide, and reset.
+- `IRenderer.h` no longer includes `raylib.h`. `Application` and `Workspace` still call raylib for the window and for keys.
 - Emscripten flags exist in CMake; there is no shipped web product.
 
 Those limits are why [portability.md](portability.md) and [hardware.md](hardware.md) are written as a **target architecture on top of the existing contracts**, not as a description of running code.
