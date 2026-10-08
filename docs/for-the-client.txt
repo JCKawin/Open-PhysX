@@ -1,0 +1,23 @@
+Open PhysX — where we are
+
+The editor is up. You can orbit the view, move the cube, undo, and play the timeline. That part is in place.
+
+The physics is the work ahead. We are building it the way Blender does: objects in a scene, modifiers, constraints, rigid bodies, then fluid. Same ideas, our own code.
+
+What you will see, in order
+
+1. More than one object. A list, names, select, duplicate, delete.
+2. Import a model (OBJ, STL, PLY) and save the scene.
+3. On-screen move, rotate, and scale handles, and cleaner property panels.
+4. Modifiers and simple constraints (copy location, limits, parent).
+5. Rigid bodies that fall, collide, rest, and can be scrubbed back without resimulating.
+6. Joints: hinge, slider, fixed, and a few others.
+7. Gas in a box, saved as OpenVDB so playback is instant.
+
+Cloth, liquid, and heavier formats (FBX, USD) come after the rigid-body cache and the fluid cache both play back cleanly.
+
+What we are not building in this pass
+
+A full Blender clone. No sculpt, no film renderer, no Python add-ons. The goal is a physics workstation that feels familiar if you know Blender.
+
+The detailed build list is in docs/engine-path.md. Each step has its own short page under docs/epica through docs/epich.

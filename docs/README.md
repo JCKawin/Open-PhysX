@@ -13,6 +13,7 @@ This folder is the maintained explanation of the software: what exists now, how 
 | How CMake pulls raylib / ImGui and produces a binary | [diagrams/03-build-graph.drawio](diagrams/03-build-graph.drawio) |
 | Run on Windows, Linux, macOS, the web, and headless | [portability.md](portability.md) + [04](diagrams/04-portability.drawio) |
 | Saturate CPU cores, SIMD, and GPU compute | [hardware.md](hardware.md) + [05](diagrams/05-hardware.drawio) |
+| Remaining work to a Blender-shaped solver | [engine-path.md](engine-path.md) |
 | Rules so the diagrams do not rot | [maintenance.md](maintenance.md) |
 
 Markdown is the **why / how / spec**. Draw.io is the **structure**. GitHub will render the mermaid sketches in the `.md` files; the `.drawio` files are the ones you rearrange in [diagrams.net](https://app.diagrams.net/) or the VS Code / JetBrains draw.io plugins.
