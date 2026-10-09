@@ -31,7 +31,7 @@ void reset_simulation(Editor& editor, ISimulation& simulation)
 {
     EditSnapshot before;
     before.state = simulation.state();
-    before.scene = simulation.scene();
+    before.scene = simulation.editor_scene();
     before.active = simulation.active_id();
     simulation.reset();
     editor.commit_edit(simulation, before, true);
@@ -512,18 +512,18 @@ void Workspace::draw_animation_player(ISimulation& simulation)
     if (state.playing)
     {
         if (ImGui::Button(ICON_FA_PAUSE " Pause"))
-            state.playing = false;
+            simulation.pause();
     }
     else
     {
         if (ImGui::Button(ICON_FA_PLAY " Play"))
-            state.playing = true;
+            simulation.play();
     }
 
     ImGui::SameLine();
     if (ImGui::Button(ICON_FA_STOP " Stop"))
     {
-        state.playing = false;
+        simulation.stop();
         simulation.seek(0.0f);
     }
     ImGui::SameLine();

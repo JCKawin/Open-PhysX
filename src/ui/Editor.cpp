@@ -146,7 +146,7 @@ EditSnapshot capture(const ISimulation& simulation)
 {
     EditSnapshot shot;
     shot.state = simulation.state();
-    shot.scene = simulation.scene();
+    shot.scene = simulation.editor_scene();
     shot.active = simulation.active_id();
     return shot;
 }
@@ -290,6 +290,10 @@ void Editor::begin_frame(const ISimulation& simulation)
 
 void Editor::commit_edit(ISimulation& simulation, const EditSnapshot& before, bool full)
 {
+    // Play mode edits the runtime copy. They are thrown away on stop and must not enter undo.
+    if (simulation.simulating())
+        return;
+
     const EditSnapshot after = capture(simulation);
     if (full)
     {
@@ -309,21 +313,24 @@ void Editor::commit_edit(ISimulation& simulation, const EditSnapshot& before, bo
 
 void Editor::restore(ISimulation& simulation, const EditSnapshot& shot, bool full)
 {
+    const bool want_play = full ? shot.state.playing : simulation.state().playing;
+    if (simulation.simulating())
+        simulation.stop();
+
     if (full)
-    {
         simulation.state() = shot.state;
-        simulation.scene() = shot.scene;
-        simulation.set_active(shot.active);
-        return;
+    else
+    {
+        const float time = simulation.state().time;
+        simulation.state() = shot.state;
+        simulation.state().time = time;
+        simulation.state().playing = false;
     }
 
-    const float time = simulation.state().time;
-    const bool playing = simulation.state().playing;
-    simulation.state() = shot.state;
-    simulation.state().time = time;
-    simulation.state().playing = playing;
-    simulation.scene() = shot.scene;
+    simulation.editor_scene() = shot.scene;
     simulation.set_active(shot.active);
+    if (want_play)
+        simulation.play();
 }
 
 void Editor::cancel_modal(ISimulation& simulation)
@@ -409,7 +416,12 @@ void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focu
     }
 
     if (!item_focused && IsKeyPressed(KEY_SPACE))
-        simulation.state().playing = !simulation.state().playing;
+    {
+        if (simulation.state().playing)
+            simulation.pause();
+        else
+            simulation.play();
+    }
 }
 
 void Editor::begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample)

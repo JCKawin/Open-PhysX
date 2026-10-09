@@ -123,6 +123,7 @@ set(OPENPHYSX_SOURCES
     src/Application.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
+    src/ecs/component_registry.cpp
     src/logic/Simulation.cpp
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
@@ -162,11 +163,14 @@ enable_testing()
 add_executable(Open_PhysX_tests
     tests/test_main.cpp
     tests/ecs_scene.cpp
+    tests/ecs_registry.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
+    src/ecs/component_registry.cpp
+    src/logic/Simulation.cpp
 )
 target_include_directories(Open_PhysX_tests PRIVATE src)
-target_link_libraries(Open_PhysX_tests PRIVATE doctest::doctest EnTT::EnTT)
+target_link_libraries(Open_PhysX_tests PRIVATE doctest::doctest EnTT::EnTT nlohmann_json::nlohmann_json)
 add_test(NAME Open_PhysX_tests COMMAND Open_PhysX_tests)
 
 if(EMSCRIPTEN OR PLATFORM STREQUAL "Web")

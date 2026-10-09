@@ -39,6 +39,16 @@ struct EditorStateComponent
     bool locked = false;
 };
 
+inline bool operator==(const IDComponent& a, const IDComponent& b)
+{
+    return a.id == b.id;
+}
+
+inline bool operator==(const TagComponent& a, const TagComponent& b)
+{
+    return a.name == b.name;
+}
+
 inline bool operator==(const TransformComponent& a, const TransformComponent& b)
 {
     return a.position == b.position && a.rotation == b.rotation && a.scale == b.scale;

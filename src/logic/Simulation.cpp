@@ -13,17 +13,37 @@ Simulation::Simulation()
 
 void Simulation::make_default_cube()
 {
-    Entity cube = scene_.CreateEntity("Cube");
+    Entity cube = editor_.CreateEntity("Cube");
     cube.Get<TransformComponent>().position = {0.0f, 1.0f, 0.0f};
     cube.Add<PrimitiveBoxComponent>();
     cube.Add<SelectionOutlineTag>();
     active_ = cube.GetUUID();
 }
 
+void Simulation::play()
+{
+    if (!runtime_)
+        runtime_ = editor_;
+    state_.playing = true;
+}
+
+void Simulation::pause()
+{
+    state_.playing = false;
+}
+
+void Simulation::stop()
+{
+    state_.playing = false;
+    runtime_.reset();
+}
+
 void Simulation::reset()
 {
+    stop();
     state_ = SimulationState{};
-    scene_ = Scene{};
+    editor_ = Scene{};
+    active_ = kNullUuid;
     make_default_cube();
 }
 
@@ -59,7 +79,7 @@ void Simulation::step(float dt)
     seek(state_.time + dt * state_.playback_speed);
 
     if (!state_.loop && state_.time >= state_.duration)
-        state_.playing = false;
+        pause();
 }
 
 RigidBody Simulation::visual_body() const

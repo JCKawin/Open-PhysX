@@ -1,6 +1,7 @@
 #include "ecs/scene.hpp"
 
 #include "core/Math.h"
+#include "ecs/component_registry.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -18,22 +19,6 @@ float safe_div(float value, float scale)
     if (std::fabs(scale) <= 1.0e-8f)
         return value;
     return value / scale;
-}
-
-bool same_optional_box(const Entity& a, const Entity& b)
-{
-    const bool has_a = a.Has<PrimitiveBoxComponent>();
-    const bool has_b = b.Has<PrimitiveBoxComponent>();
-    if (has_a != has_b)
-        return false;
-    if (!has_a)
-        return true;
-    return a.Get<PrimitiveBoxComponent>() == b.Get<PrimitiveBoxComponent>();
-}
-
-bool same_selection(const Entity& a, const Entity& b)
-{
-    return a.Has<SelectionOutlineTag>() == b.Has<SelectionOutlineTag>();
 }
 
 } // namespace
@@ -58,6 +43,7 @@ Entity::operator bool() const
 
 Scene::Scene()
 {
+    EnsureComponentsRegistered();
     registry_.ctx().emplace<SceneBackref>(SceneBackref{this});
     registry_.on_construct<IDComponent>().connect<&Scene::OnIdConstruct>();
     registry_.on_destroy<IDComponent>().connect<&Scene::OnIdDestroy>();
@@ -340,21 +326,17 @@ void Scene::CopyEntitiesFrom(const Scene& other)
         Entity copy = CreateEntityWithUUID(id, source.Get<TagComponent>().name);
         if (!copy)
             continue;
-        if (source.Has<TransformComponent>())
-            copy.Get<TransformComponent>() = source.Get<TransformComponent>();
-        if (source.Has<RelationshipComponent>())
-            copy.Get<RelationshipComponent>() = source.Get<RelationshipComponent>();
-        if (source.Has<EditorStateComponent>())
-            copy.Get<EditorStateComponent>() = source.Get<EditorStateComponent>();
-        if (source.Has<PrimitiveBoxComponent>())
-            copy.Add<PrimitiveBoxComponent>(source.Get<PrimitiveBoxComponent>());
-        if (source.Has<SelectionOutlineTag>())
-            copy.Add<SelectionOutlineTag>();
+        for (const ComponentInfo& info : ComponentRegistry::Instance().All())
+        {
+            if (info.replicate && info.copy)
+                info.copy(source, copy);
+        }
     }
 }
 
 bool operator==(const Scene& a, const Scene& b)
 {
+    EnsureComponentsRegistered();
     if (a.creation_order_ != b.creation_order_)
         return false;
     for (const UUID id : a.creation_order_)
@@ -363,16 +345,13 @@ bool operator==(const Scene& a, const Scene& b)
         const Entity right = b.FindByUUID(id);
         if (!left || !right)
             return false;
-        if (left.Get<TagComponent>().name != right.Get<TagComponent>().name)
-            return false;
-        if (!(left.Get<TransformComponent>() == right.Get<TransformComponent>()))
-            return false;
-        if (!(left.Get<RelationshipComponent>() == right.Get<RelationshipComponent>()))
-            return false;
-        if (!(left.Get<EditorStateComponent>() == right.Get<EditorStateComponent>()))
-            return false;
-        if (!same_optional_box(left, right) || !same_selection(left, right))
-            return false;
+        for (const ComponentInfo& info : ComponentRegistry::Instance().All())
+        {
+            if (!info.compares || !info.equals)
+                continue;
+            if (!info.equals(left, right))
+                return false;
+        }
     }
     return true;
 }
