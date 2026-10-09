@@ -74,6 +74,7 @@ Scene::Scene(Scene&& other) noexcept
     , creation_order_(std::move(other.creation_order_))
     , destroy_queue_(std::move(other.destroy_queue_))
     , pending_(std::move(other.pending_))
+    , unknown_(std::move(other.unknown_))
 {
     Rebind();
 }
@@ -87,6 +88,7 @@ Scene& Scene::operator=(Scene&& other) noexcept
     creation_order_ = std::move(other.creation_order_);
     destroy_queue_ = std::move(other.destroy_queue_);
     pending_ = std::move(other.pending_);
+    unknown_ = std::move(other.unknown_);
     Rebind();
     return *this;
 }
@@ -116,6 +118,7 @@ void Scene::OnIdDestroy(entt::registry& registry, entt::entity entity)
     const UUID id = registry.get<IDComponent>(entity).id;
     scene->uuid_map_.erase(id);
     std::erase(scene->creation_order_, id);
+    scene->unknown_.erase(id);
 }
 
 Entity Scene::CreateEntity(std::string_view name)
@@ -229,10 +232,23 @@ bool Scene::IsUnder(Entity ancestor, Entity node) const
     return false;
 }
 
+namespace {
+
+TransformComponent WorldTransformLimited(const Scene& scene, Entity entity, int depth);
+
+} // namespace
+
 TransformComponent Scene::GetWorldTransform(Entity entity) const
 {
+    return WorldTransformLimited(*this, entity, 0);
+}
+
+namespace {
+
+TransformComponent WorldTransformLimited(const Scene& scene, Entity entity, int depth)
+{
     TransformComponent local{};
-    if (!entity || !entity.Has<TransformComponent>())
+    if (!entity || !entity.Has<TransformComponent>() || depth > 64)
         return local;
     local = entity.Get<TransformComponent>();
     if (!entity.Has<RelationshipComponent>())
@@ -241,11 +257,11 @@ TransformComponent Scene::GetWorldTransform(Entity entity) const
     const UUID parent_id = entity.Get<RelationshipComponent>().parent;
     if (parent_id == kNullUuid)
         return local;
-    const Entity parent = FindByUUID(parent_id);
+    const Entity parent = scene.FindByUUID(parent_id);
     if (!parent)
         return local;
 
-    const TransformComponent world_parent = GetWorldTransform(parent);
+    const TransformComponent world_parent = WorldTransformLimited(scene, parent, depth + 1);
     TransformComponent world;
     world.scale = {
         world_parent.scale.x * local.scale.x,
@@ -261,6 +277,8 @@ TransformComponent Scene::GetWorldTransform(Entity entity) const
     world.position = vec_add(world_parent.position, quat_rotate(world_parent.rotation, scaled));
     return world;
 }
+
+} // namespace
 
 void Scene::ApplyWorld(Entity entity, const TransformComponent& world)
 {
@@ -332,12 +350,23 @@ void Scene::CopyEntitiesFrom(const Scene& other)
                 info.copy(source, copy);
         }
     }
+    unknown_ = other.unknown_;
+}
+
+void Scene::SetUnknownComponents(UUID id, std::vector<UnknownComponent> components)
+{
+    if (!uuid_map_.contains(id) || components.empty())
+    {
+        unknown_.erase(id);
+        return;
+    }
+    unknown_[id] = std::move(components);
 }
 
 bool operator==(const Scene& a, const Scene& b)
 {
     EnsureComponentsRegistered();
-    if (a.creation_order_ != b.creation_order_)
+    if (a.creation_order_ != b.creation_order_ || a.unknown_ != b.unknown_)
         return false;
     for (const UUID id : a.creation_order_)
     {

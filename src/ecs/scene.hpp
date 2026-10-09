@@ -7,6 +7,7 @@
 
 #include <entt/entt.hpp>
 
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -59,6 +60,16 @@ public:
 
     const std::vector<UUID>& CreationOrder() const { return creation_order_; }
 
+    // Components from a file that this build does not know. They are written back unchanged.
+    struct UnknownComponent
+    {
+        std::string name;
+        std::string json;
+    };
+
+    void SetUnknownComponents(UUID id, std::vector<UnknownComponent> components);
+    const std::unordered_map<UUID, std::vector<UnknownComponent>>& UnknownComponents() const { return unknown_; }
+
     friend bool operator==(const Scene& a, const Scene& b);
 
 private:
@@ -76,7 +87,13 @@ private:
     std::vector<UUID> creation_order_;
     std::vector<UUID> destroy_queue_;
     std::unordered_set<UUID> pending_;
+    std::unordered_map<UUID, std::vector<UnknownComponent>> unknown_;
 };
+
+inline bool operator==(const Scene::UnknownComponent& a, const Scene::UnknownComponent& b)
+{
+    return a.name == b.name && a.json == b.json;
+}
 
 bool operator==(const Scene& a, const Scene& b);
 
