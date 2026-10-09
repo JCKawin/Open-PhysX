@@ -116,6 +116,19 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 FetchContent_MakeAvailable(doctest)
 
 # -----------------------------------------------------------------------------
+# Native file dialogs. Pinned. No custom file browser.
+# -----------------------------------------------------------------------------
+set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    nfd
+    URL https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.2.1.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    EXCLUDE_FROM_ALL
+)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+FetchContent_MakeAvailable(nfd)
+
+# -----------------------------------------------------------------------------
 # Application
 # -----------------------------------------------------------------------------
 set(OPENPHYSX_SOURCES
@@ -134,11 +147,12 @@ set(OPENPHYSX_SOURCES
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
     src/ui/Editor.cpp
+    src/ui/file_menu.cpp
 )
 
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE src)
-target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui EnTT::EnTT nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui EnTT::EnTT nlohmann_json::nlohmann_json nfd::nfd)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "src" FILES ${OPENPHYSX_SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

@@ -1,0 +1,44 @@
+#pragma once
+
+#include "persistence/project_manager.hpp"
+
+#include <string>
+
+namespace openphysx {
+
+class CommandStack;
+class IRenderer;
+class ISimulation;
+
+enum class FilePending
+{
+    None,
+    New,
+    Open,
+    Exit,
+    Revert,
+};
+
+struct FileSession
+{
+    ProjectManager projects;
+    FilePending pending = FilePending::None;
+    bool unsaved_popup = false;
+    bool error_popup = false;
+    bool apply_view = false;
+    bool reset_view = false;
+    std::string error;
+};
+
+void InitFileDialogs();
+void ShutdownFileDialogs();
+
+void DrawFileMenu(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool& quit);
+void HandleFileShortcuts(
+    FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool text_input, bool& quit);
+void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool& quit);
+void RequestFileQuit(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool& quit);
+void ApplyLoadedView(FileSession& session, IRenderer& renderer);
+void UpdateWindowTitle(const FileSession& session, const CommandStack& commands);
+
+} // namespace openphysx

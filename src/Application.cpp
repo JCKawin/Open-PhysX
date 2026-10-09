@@ -19,8 +19,14 @@ int Application::run()
 {
     init();
 
-    while (!WindowShouldClose() && !workspace_.quit_requested())
+    while (!workspace_.quit_requested())
+    {
+        if (WindowShouldClose())
+            workspace_.request_quit(simulation_, renderer_);
+        if (workspace_.quit_requested())
+            break;
         frame();
+    }
 
     shutdown();
     return 0;
@@ -29,7 +35,7 @@ int Application::run()
 void Application::init()
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
-    InitWindow(kWindowWidth, kWindowHeight, "Open PhysX");
+    InitWindow(kWindowWidth, kWindowHeight, "OpenPhysX - Untitled");
     SetTargetFPS(kTargetFps);
     SetExitKey(KEY_NULL);
 
@@ -51,6 +57,7 @@ void Application::shutdown()
     if (!initialized_)
         return;
 
+    workspace_.shutdown();
     renderer_.shutdown();
     rlImGuiShutdown();
     CloseWindow();

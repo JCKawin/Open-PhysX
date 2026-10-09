@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/Editor.h"
+#include "ui/file_menu.hpp"
 
 #include "imgui.h"
 
@@ -13,10 +14,11 @@ class Workspace
 {
 public:
     void init();
+    void shutdown();
     void draw(ISimulation& simulation, IRenderer& renderer);
 
     bool quit_requested() const { return quit_requested_; }
-    void request_quit() { quit_requested_ = true; }
+    void request_quit(ISimulation& simulation, IRenderer& renderer);
 
 private:
     void apply_theme();
@@ -43,6 +45,7 @@ private:
     Vec3 euler_cache_{};
     EditSnapshot edit_before_{};
     Editor editor_{};
+    FileSession files_{};
 };
 
 } // namespace openphysx

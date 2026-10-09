@@ -1,6 +1,7 @@
 #include "ui/Workspace.h"
 
 #include "ecs/pose.hpp"
+#include "ui/file_menu.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
 
@@ -42,6 +43,17 @@ void reset_simulation(Editor& editor, ISimulation& simulation)
 void Workspace::init()
 {
     apply_theme();
+    InitFileDialogs();
+}
+
+void Workspace::shutdown()
+{
+    ShutdownFileDialogs();
+}
+
+void Workspace::request_quit(ISimulation& simulation, IRenderer& renderer)
+{
+    RequestFileQuit(files_, simulation, renderer, editor_.commands(), quit_requested_);
 }
 
 void Workspace::apply_theme()
@@ -121,7 +133,9 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
 {
     editor_.begin_frame(simulation);
     const ImGuiIO& io = ImGui::GetIO();
+    HandleFileShortcuts(files_, simulation, renderer, editor_.commands(), io.WantTextInput, quit_requested_);
     editor_.handle_app(simulation, io.WantTextInput, ImGui::IsAnyItemFocused(), quit_requested_);
+    UpdateWindowTitle(files_, editor_.commands());
 
     draw_menu_bar(simulation, renderer);
     draw_dockspace();
@@ -137,6 +151,9 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
         ImGui::ShowDemoWindow(&show_demo_);
     if (show_metrics_)
         ImGui::ShowMetricsWindow(&show_metrics_);
+
+    DrawFilePopups(files_, simulation, renderer, editor_.commands(), quit_requested_);
+    ApplyLoadedView(files_, renderer);
 }
 
 void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
@@ -144,17 +161,7 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
     if (!ImGui::BeginMainMenuBar())
         return;
 
-    if (ImGui::BeginMenu("File"))
-    {
-        if (ImGui::MenuItem("New Simulation", "Ctrl+N"))
-            reset_simulation(editor_, simulation);
-        ImGui::MenuItem("Open...", nullptr, false, false);
-        ImGui::MenuItem("Save...", nullptr, false, false);
-        ImGui::Separator();
-        if (ImGui::MenuItem("Quit", "Ctrl+Q"))
-            quit_requested_ = true;
-        ImGui::EndMenu();
-    }
+    DrawFileMenu(files_, simulation, renderer, editor_.commands(), quit_requested_);
 
     if (ImGui::BeginMenu("Edit"))
     {

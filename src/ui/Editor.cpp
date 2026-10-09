@@ -83,8 +83,6 @@ constexpr int kZoom = 3;
 constexpr AppBind kAppBinds[] = {
     {KEY_Z, kModCtrl | kModShift, AppAction::Redo},
     {KEY_Z, kModCtrl, AppAction::Undo},
-    {KEY_N, kModCtrl, AppAction::Reset},
-    {KEY_Q, kModCtrl, AppAction::Quit},
 };
 
 constexpr KeyBind kViewBinds[] = {
