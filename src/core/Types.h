@@ -47,9 +47,6 @@ struct SimulationState
     int grid_slices = 20;
     float grid_spacing = 1.0f;
     Rgb clear_color{0.12f, 0.12f, 0.14f};
-    RigidBody cube{};
-    bool cube_visible = true;
-    bool cube_selected = true;
 };
 
 inline bool operator==(const Vec3& a, const Vec3& b)
@@ -77,8 +74,7 @@ inline bool operator==(const SimulationState& a, const SimulationState& b)
     return a.time == b.time && a.duration == b.duration && a.playback_speed == b.playback_speed &&
            a.playing == b.playing && a.loop == b.loop && a.show_grid == b.show_grid &&
            a.demo_motion == b.demo_motion && a.grid_slices == b.grid_slices &&
-           a.grid_spacing == b.grid_spacing && a.clear_color == b.clear_color && a.cube == b.cube &&
-           a.cube_visible == b.cube_visible && a.cube_selected == b.cube_selected;
+           a.grid_spacing == b.grid_spacing && a.clear_color == b.clear_color;
 }
 
 inline bool operator!=(const SimulationState& a, const SimulationState& b)

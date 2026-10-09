@@ -1,12 +1,30 @@
 #include "logic/Simulation.h"
 
+#include "ecs/pose.hpp"
+
 #include <cmath>
 
 namespace openphysx {
 
+Simulation::Simulation()
+{
+    make_default_cube();
+}
+
+void Simulation::make_default_cube()
+{
+    Entity cube = scene_.CreateEntity("Cube");
+    cube.Get<TransformComponent>().position = {0.0f, 1.0f, 0.0f};
+    cube.Add<PrimitiveBoxComponent>();
+    cube.Add<SelectionOutlineTag>();
+    active_ = cube.GetUUID();
+}
+
 void Simulation::reset()
 {
     state_ = SimulationState{};
+    scene_ = Scene{};
+    make_default_cube();
 }
 
 void Simulation::seek(float time)
@@ -46,7 +64,11 @@ void Simulation::step(float dt)
 
 RigidBody Simulation::visual_body() const
 {
-    RigidBody body = state_.cube;
+    const Entity entity = active_entity();
+    if (!entity)
+        return {};
+
+    RigidBody body = EntityPose(entity);
     if (state_.demo_motion)
         body.position.y += std::sin(state_.time * 3.0f) * 0.25f;
     return body;

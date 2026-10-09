@@ -1,5 +1,6 @@
 #include "ui/Workspace.h"
 
+#include "ecs/pose.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
 
@@ -28,7 +29,10 @@ ImVec4 rgba(int r, int g, int b, int a = 255)
 
 void reset_simulation(Editor& editor, ISimulation& simulation)
 {
-    const SimulationState before = simulation.state();
+    EditSnapshot before;
+    before.state = simulation.state();
+    before.scene = simulation.scene();
+    before.active = simulation.active_id();
     simulation.reset();
     editor.commit_edit(simulation, before, true);
 }
@@ -115,7 +119,7 @@ void Workspace::apply_theme()
 
 void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
 {
-    editor_.begin_frame(simulation.state());
+    editor_.begin_frame(simulation);
     const ImGuiIO& io = ImGui::GetIO();
     editor_.handle_app(simulation, io.WantTextInput, ImGui::IsAnyItemFocused(), quit_requested_);
 
@@ -325,6 +329,7 @@ void Workspace::draw_viewport(ISimulation& simulation, IRenderer& renderer)
         const bool text_input = ImGui::GetIO().WantTextInput;
         const bool widget_active = ImGui::GetActiveID() != 0;
         editor_.handle_viewport(simulation, renderer, sample, text_input, widget_active);
+        simulation.scene().FlushDestroyed();
         renderer.tick_view(GetFrameTime());
         view_ticked_ = true;
         renderer.render(simulation);
@@ -392,35 +397,53 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
 
     SimulationState& state = simulation.state();
     View3D& view = renderer.view();
+    Entity entity = simulation.active_entity();
+    TransformComponent* transform = entity && entity.Has<TransformComponent>() ? &entity.Get<TransformComponent>() : nullptr;
+    PrimitiveBoxComponent* box = entity && entity.Has<PrimitiveBoxComponent>() ? &entity.Get<PrimitiveBoxComponent>() : nullptr;
+    EditorStateComponent* editor_state = entity && entity.Has<EditorStateComponent>() ? &entity.Get<EditorStateComponent>() : nullptr;
+    bool selected = EntitySelected(entity);
 
     auto arm_edit = [&]() {
         if (ImGui::IsItemActivated())
-            edit_before_ = editor_.frame_state();
+            edit_before_ = editor_.frame_snapshot();
         if (ImGui::IsItemDeactivatedAfterEdit())
             editor_.commit_edit(simulation, edit_before_, false);
     };
 
-    if (ImGui::CollapsingHeader("Cube", ImGuiTreeNodeFlags_DefaultOpen))
+    if (entity && ImGui::CollapsingHeader("Object", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::Checkbox("Visible", &state.cube_visible);
-        arm_edit();
-        ImGui::Checkbox("Selected", &state.cube_selected);
-        ImGui::DragFloat3("Position", &state.cube.position.x, 0.05f);
-        arm_edit();
-        if (!euler_active_)
+        if (entity.Has<TagComponent>())
+            ImGui::TextUnformatted(entity.Get<TagComponent>().name.c_str());
+        if (editor_state != nullptr)
         {
-            const Vec3 euler = quat_to_euler_xyz(state.cube.rotation);
-            euler_cache_ = {rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z)};
+            ImGui::Checkbox("Visible", &editor_state->visible);
+            arm_edit();
         }
-        if (ImGui::DragFloat3("Rotation", &euler_cache_.x, 1.0f))
-            state.cube.rotation = quat_from_euler_xyz(
-                {deg_to_rad(euler_cache_.x), deg_to_rad(euler_cache_.y), deg_to_rad(euler_cache_.z)});
-        euler_active_ = ImGui::IsItemActive();
+        if (ImGui::Checkbox("Selected", &selected))
+            SetEntitySelected(entity, selected);
         arm_edit();
-        ImGui::DragFloat3("Size", &state.cube.size.x, 0.05f, 0.05f, 20.0f);
-        arm_edit();
-        ImGui::ColorEdit3("Color", state.cube.color.data());
-        arm_edit();
+        if (transform != nullptr)
+        {
+            ImGui::DragFloat3("Position", &transform->position.x, 0.05f);
+            arm_edit();
+            if (!euler_active_)
+            {
+                const Vec3 euler = quat_to_euler_xyz(transform->rotation);
+                euler_cache_ = {rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z)};
+            }
+            if (ImGui::DragFloat3("Rotation", &euler_cache_.x, 1.0f))
+                transform->rotation = quat_from_euler_xyz(
+                    {deg_to_rad(euler_cache_.x), deg_to_rad(euler_cache_.y), deg_to_rad(euler_cache_.z)});
+            euler_active_ = ImGui::IsItemActive();
+            arm_edit();
+        }
+        if (box != nullptr)
+        {
+            ImGui::DragFloat3("Size", &box->size.x, 0.05f, 0.05f, 20.0f);
+            arm_edit();
+            ImGui::ColorEdit3("Color", box->color.data());
+            arm_edit();
+        }
     }
 
     if (ImGui::CollapsingHeader("World", ImGuiTreeNodeFlags_DefaultOpen))

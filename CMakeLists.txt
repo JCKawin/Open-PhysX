@@ -6,7 +6,7 @@ project(Open_PhysX
     LANGUAGES C CXX
 )
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
@@ -80,11 +80,49 @@ set_target_properties(rlImGui PROPERTIES
 )
 
 # -----------------------------------------------------------------------------
+# EnTT (pinned). Header-only. Do not track master.
+# -----------------------------------------------------------------------------
+FetchContent_Declare(
+    EnTT
+    URL https://github.com/skypjack/entt/archive/refs/tags/v3.15.0.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(EnTT)
+
+# -----------------------------------------------------------------------------
+# nlohmann/json (pinned)
+# -----------------------------------------------------------------------------
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+set(JSON_Install OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    EXCLUDE_FROM_ALL
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
+# -----------------------------------------------------------------------------
+# doctest
+# -----------------------------------------------------------------------------
+FetchContent_Declare(
+    doctest
+    URL https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    EXCLUDE_FROM_ALL
+)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+FetchContent_MakeAvailable(doctest)
+
+# -----------------------------------------------------------------------------
 # Application
 # -----------------------------------------------------------------------------
 set(OPENPHYSX_SOURCES
     src/main.cpp
     src/Application.cpp
+    src/ecs/uuid.cpp
+    src/ecs/scene.cpp
     src/logic/Simulation.cpp
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
@@ -93,7 +131,7 @@ set(OPENPHYSX_SOURCES
 
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE src)
-target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui)
+target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui EnTT::EnTT nlohmann_json::nlohmann_json)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "src" FILES ${OPENPHYSX_SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -116,6 +154,20 @@ if(APPLE)
         "-framework QuartzCore"
     )
 endif()
+
+# -----------------------------------------------------------------------------
+# Tests
+# -----------------------------------------------------------------------------
+enable_testing()
+add_executable(Open_PhysX_tests
+    tests/test_main.cpp
+    tests/ecs_scene.cpp
+    src/ecs/uuid.cpp
+    src/ecs/scene.cpp
+)
+target_include_directories(Open_PhysX_tests PRIVATE src)
+target_link_libraries(Open_PhysX_tests PRIVATE doctest::doctest EnTT::EnTT)
+add_test(NAME Open_PhysX_tests COMMAND Open_PhysX_tests)
 
 if(EMSCRIPTEN OR PLATFORM STREQUAL "Web")
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")

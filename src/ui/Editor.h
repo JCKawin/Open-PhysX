@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/View.h"
+#include "ecs/scene.hpp"
 
 #include <string>
 #include <vector>
@@ -39,17 +40,26 @@ struct ViewportSample
     float height = 1.0f;
 };
 
+// Transport block plus the scene. A pose edit has to keep the active object's transform,
+// because that transform no longer lives on SimulationState.
+struct EditSnapshot
+{
+    SimulationState state{};
+    Scene scene{};
+    UUID active = kNullUuid;
+};
+
 // Keymap, modal operators, and the editor undo stack. UI code only.
 class Editor
 {
 public:
-    void begin_frame(const SimulationState& state);
-    const SimulationState& frame_state() const { return frame_state_; }
+    void begin_frame(const ISimulation& simulation);
+    const EditSnapshot& frame_snapshot() const { return frame_; }
 
     void handle_app(ISimulation& simulation, bool text_input, bool item_focused, bool& quit);
     void handle_viewport(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample, bool text_input, bool widget_active);
 
-    void commit_edit(ISimulation& simulation, const SimulationState& before, bool full);
+    void commit_edit(ISimulation& simulation, const EditSnapshot& before, bool full);
     void undo(ISimulation& simulation);
     void redo(ISimulation& simulation);
     bool can_undo() const { return !undo_.empty(); }
@@ -83,10 +93,11 @@ private:
 
     struct HistoryItem
     {
-        SimulationState state{};
+        EditSnapshot shot{};
         bool full = false;
     };
 
+    void restore(ISimulation& simulation, const EditSnapshot& shot, bool full);
     void cancel_modal(ISimulation& simulation);
     void confirm_transform(ISimulation& simulation);
     void begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample);
@@ -95,7 +106,7 @@ private:
     void click_select(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
     void try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
 
-    SimulationState frame_state_{};
+    EditSnapshot frame_{};
     std::vector<HistoryItem> undo_;
     std::vector<HistoryItem> redo_;
 

@@ -41,7 +41,7 @@ private:
     bool view_ticked_ = false;
     bool euler_active_ = false;
     Vec3 euler_cache_{};
-    SimulationState edit_before_{};
+    EditSnapshot edit_before_{};
     Editor editor_{};
 };
 

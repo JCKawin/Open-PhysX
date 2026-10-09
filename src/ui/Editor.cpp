@@ -1,5 +1,6 @@
 #include "ui/Editor.h"
 
+#include "ecs/pose.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
 
@@ -141,13 +142,22 @@ bool mods_match(Mods mods, int mask)
            mods.alt == ((mask & kModAlt) != 0);
 }
 
-bool same_edit(const SimulationState& a, const SimulationState& b)
+EditSnapshot capture(const ISimulation& simulation)
 {
-    SimulationState left = a;
-    SimulationState right = b;
+    EditSnapshot shot;
+    shot.state = simulation.state();
+    shot.scene = simulation.scene();
+    shot.active = simulation.active_id();
+    return shot;
+}
+
+bool same_edit(const EditSnapshot& a, const EditSnapshot& b)
+{
+    SimulationState left = a.state;
+    SimulationState right = b.state;
     left.time = right.time = 0.0f;
     left.playing = right.playing = false;
-    return left == right;
+    return left == right && a.scene == b.scene && a.active == b.active;
 }
 
 float body_radius(const RigidBody& body)
@@ -273,17 +283,17 @@ bool parse_numeric(const std::string& numeric, float& value)
 
 } // namespace
 
-void Editor::begin_frame(const SimulationState& state)
+void Editor::begin_frame(const ISimulation& simulation)
 {
-    frame_state_ = state;
+    frame_ = capture(simulation);
 }
 
-void Editor::commit_edit(ISimulation& simulation, const SimulationState& before, bool full)
+void Editor::commit_edit(ISimulation& simulation, const EditSnapshot& before, bool full)
 {
-    const SimulationState& after = simulation.state();
+    const EditSnapshot after = capture(simulation);
     if (full)
     {
-        if (before == after)
+        if (before.state == after.state && before.scene == after.scene && before.active == after.active)
             return;
     }
     else if (same_edit(before, after))
@@ -297,10 +307,31 @@ void Editor::commit_edit(ISimulation& simulation, const SimulationState& before,
         undo_.erase(undo_.begin());
 }
 
+void Editor::restore(ISimulation& simulation, const EditSnapshot& shot, bool full)
+{
+    if (full)
+    {
+        simulation.state() = shot.state;
+        simulation.scene() = shot.scene;
+        simulation.set_active(shot.active);
+        return;
+    }
+
+    const float time = simulation.state().time;
+    const bool playing = simulation.state().playing;
+    simulation.state() = shot.state;
+    simulation.state().time = time;
+    simulation.state().playing = playing;
+    simulation.scene() = shot.scene;
+    simulation.set_active(shot.active);
+}
+
 void Editor::cancel_modal(ISimulation& simulation)
 {
     if (modal_ == Modal::Transform)
-        simulation.state().cube = body_before_;
+    {
+        SetEntityPose(simulation.active_entity(), body_before_);
+    }
     modal_ = Modal::None;
     numeric_.clear();
     axis_ = -1;
@@ -310,8 +341,8 @@ void Editor::cancel_modal(ISimulation& simulation)
 
 void Editor::confirm_transform(ISimulation& simulation)
 {
-    SimulationState before = simulation.state();
-    before.cube = body_before_;
+    EditSnapshot before = capture(simulation);
+    SetEntityPose(before.scene.FindByUUID(before.active), body_before_);
     modal_ = Modal::None;
     numeric_.clear();
     axis_ = -1;
@@ -327,19 +358,8 @@ void Editor::undo(ISimulation& simulation)
 
     const HistoryItem item = undo_.back();
     undo_.pop_back();
-    redo_.push_back(HistoryItem{simulation.state(), item.full});
-
-    if (item.full)
-    {
-        simulation.state() = item.state;
-        return;
-    }
-
-    const float time = simulation.state().time;
-    const bool playing = simulation.state().playing;
-    simulation.state() = item.state;
-    simulation.state().time = time;
-    simulation.state().playing = playing;
+    redo_.push_back(HistoryItem{capture(simulation), item.full});
+    restore(simulation, item.shot, item.full);
 }
 
 void Editor::redo(ISimulation& simulation)
@@ -350,19 +370,8 @@ void Editor::redo(ISimulation& simulation)
 
     const HistoryItem item = redo_.back();
     redo_.pop_back();
-    undo_.push_back(HistoryItem{simulation.state(), item.full});
-
-    if (item.full)
-    {
-        simulation.state() = item.state;
-        return;
-    }
-
-    const float time = simulation.state().time;
-    const bool playing = simulation.state().playing;
-    simulation.state() = item.state;
-    simulation.state().time = time;
-    simulation.state().playing = playing;
+    undo_.push_back(HistoryItem{capture(simulation), item.full});
+    restore(simulation, item.shot, item.full);
 }
 
 void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focused, bool& quit)
@@ -384,7 +393,7 @@ void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focu
         case AppAction::Reset:
         {
             cancel_modal(simulation);
-            const SimulationState before = simulation.state();
+            const EditSnapshot before = capture(simulation);
             simulation.reset();
             commit_edit(simulation, before, true);
             break;
@@ -405,15 +414,16 @@ void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focu
 
 void Editor::begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample)
 {
-    if (!simulation.state().cube_visible)
+    const Entity entity = simulation.active_entity();
+    if (!EntityVisible(entity))
         return;
 
     cancel_modal(simulation);
     modal_ = Modal::Transform;
     xform_ = xform;
     drag_confirm_ = drag_confirm;
-    body_before_ = simulation.state().cube;
-    simulation.state().cube_selected = true;
+    body_before_ = EntityPose(entity);
+    SetEntitySelected(entity, true);
     press_x_ = sample.local_x;
     press_y_ = sample.local_y;
     axis_ = -1;
@@ -532,15 +542,17 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
             body.size.z = scale_component(body_before_.size.z);
     }
 
-    simulation.state().cube = body;
+    SetEntityPose(simulation.active_entity(), body);
 }
 
 void Editor::click_select(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
 {
-    SimulationState& state = simulation.state();
-    if (!state.cube_visible)
+    const Entity entity = simulation.active_entity();
+    if (!entity)
+        return;
+    if (!EntityVisible(entity))
     {
-        state.cube_selected = false;
+        SetEntitySelected(entity, false);
         return;
     }
 
@@ -549,8 +561,7 @@ void Editor::click_select(ISimulation& simulation, IRenderer& renderer, const Vi
     float max_x = 0.0f;
     float max_y = 0.0f;
     const bool projected = body_screen_rect(simulation.visual_body(), renderer.view(), sample, min_x, min_y, max_x, max_y);
-    state.cube_selected =
-        projected && point_in_rect(sample.local_x, sample.local_y, min_x, min_y, max_x, max_y);
+    SetEntitySelected(entity, projected && point_in_rect(sample.local_x, sample.local_y, min_x, min_y, max_x, max_y));
 }
 
 void Editor::finish_box(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
@@ -565,15 +576,17 @@ void Editor::finish_box(ISimulation& simulation, IRenderer& renderer, const View
         return;
     }
 
-    SimulationState& state = simulation.state();
+    const Entity entity = simulation.active_entity();
     float min_x = 0.0f;
     float min_y = 0.0f;
     float max_x = 0.0f;
     float max_y = 0.0f;
-    const bool projected = state.cube_visible &&
+    const bool projected = EntityVisible(entity) &&
                            body_screen_rect(simulation.visual_body(), renderer.view(), sample, min_x, min_y, max_x, max_y);
-    state.cube_selected = projected && ranges_overlap(press_x_, sample.local_x, min_x, max_x) &&
-                          ranges_overlap(press_y_, sample.local_y, min_y, max_y);
+    SetEntitySelected(
+        entity,
+        projected && ranges_overlap(press_x_, sample.local_x, min_x, max_x) &&
+            ranges_overlap(press_y_, sample.local_y, min_y, max_y));
     modal_ = Modal::None;
     box_dragging_ = false;
 }
@@ -629,7 +642,10 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
         case ViewAction::FrameAll:
         case ViewAction::FrameSelection:
         {
-            const RigidBody body = simulation.state().cube;
+            const Entity entity = simulation.active_entity();
+            if (!entity)
+                break;
+            const RigidBody body = EntityPose(entity);
             const float radius = body_radius(body) * (bind.action == ViewAction::FrameAll ? 1.45f : 1.15f);
             renderer.frame_bounds(body.position, radius, sample.aspect, true);
             break;
@@ -660,46 +676,49 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
             begin_transform(simulation, Xform::Scale, false, sample);
             break;
         case ViewAction::SelectAll:
-            simulation.state().cube_selected = true;
+            SetEntitySelected(simulation.active_entity(), true);
             break;
         case ViewAction::Hide:
         case ViewAction::Delete:
-            if (simulation.state().cube_visible)
+            if (Entity entity = simulation.active_entity(); EntityVisible(entity))
             {
-                const SimulationState before = simulation.state();
-                simulation.state().cube_visible = false;
+                const EditSnapshot before = capture(simulation);
+                entity.Get<EditorStateComponent>().visible = false;
                 commit_edit(simulation, before, false);
             }
             break;
         case ViewAction::Show:
-            if (!simulation.state().cube_visible)
+            if (Entity entity = simulation.active_entity(); entity && !EntityVisible(entity))
             {
-                const SimulationState before = simulation.state();
-                simulation.state().cube_visible = true;
+                const EditSnapshot before = capture(simulation);
+                entity.Get<EditorStateComponent>().visible = true;
                 commit_edit(simulation, before, false);
             }
             break;
         case ViewAction::ClearLocation:
-        {
-            const SimulationState before = simulation.state();
-            simulation.state().cube.position = {0.0f, 1.0f, 0.0f};
-            commit_edit(simulation, before, false);
+            if (Entity entity = simulation.active_entity(); entity && entity.Has<TransformComponent>())
+            {
+                const EditSnapshot before = capture(simulation);
+                entity.Get<TransformComponent>().position = {0.0f, 1.0f, 0.0f};
+                commit_edit(simulation, before, false);
+            }
             break;
-        }
         case ViewAction::ClearRotation:
-        {
-            const SimulationState before = simulation.state();
-            simulation.state().cube.rotation = {};
-            commit_edit(simulation, before, false);
+            if (Entity entity = simulation.active_entity(); entity && entity.Has<TransformComponent>())
+            {
+                const EditSnapshot before = capture(simulation);
+                entity.Get<TransformComponent>().rotation = {};
+                commit_edit(simulation, before, false);
+            }
             break;
-        }
         case ViewAction::ClearScale:
-        {
-            const SimulationState before = simulation.state();
-            simulation.state().cube.size = {2.0f, 2.0f, 2.0f};
-            commit_edit(simulation, before, false);
+            if (Entity entity = simulation.active_entity(); entity && entity.Has<PrimitiveBoxComponent>())
+            {
+                const EditSnapshot before = capture(simulation);
+                entity.Get<PrimitiveBoxComponent>().size = {2.0f, 2.0f, 2.0f};
+                commit_edit(simulation, before, false);
+            }
             break;
-        }
         case ViewAction::Box:
             modal_ = Modal::Box;
             box_dragging_ = true;
