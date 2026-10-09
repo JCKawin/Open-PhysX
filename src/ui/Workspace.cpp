@@ -49,6 +49,7 @@ void Workspace::init()
 
 void Workspace::shutdown()
 {
+    files_.autosave.DeleteAutosaves();
     ShutdownFileDialogs();
 }
 
@@ -134,6 +135,18 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
 {
     editor_.begin_frame(simulation);
     const ImGuiIO& io = ImGui::GetIO();
+    const bool idle = !io.WantTextInput && !ImGui::IsAnyItemActive() && !editor_.modal_active();
+    files_.autosave.Tick(
+        editor_.commands().IsDirty(),
+        idle,
+        [&] {
+            const char* ini = ImGui::SaveIniSettingsToMemory();
+            const auto bytes = files_.projects.Snapshot(simulation, renderer.view(), ini != nullptr ? ini : "");
+            return bytes ? *bytes : std::string{};
+        },
+        files_.projects.DisplayName());
+    if (files_.autosave.ConsumeNotice())
+        autosave_left_ = 3.0f;
     HandleFileShortcuts(files_, simulation, renderer, editor_.commands(), io.WantTextInput, quit_requested_);
     editor_.handle_app(simulation, io.WantTextInput, ImGui::IsAnyItemFocused(), quit_requested_);
     UpdateWindowTitle(files_, editor_.commands());
@@ -365,6 +378,11 @@ void Workspace::draw_viewport(ISimulation& simulation, IRenderer& renderer)
         char fps[32];
         std::snprintf(fps, sizeof(fps), "%d FPS", GetFPS());
         draw_list->AddText(ImVec2(overlay.x + 10.0f, overlay.y + 8.0f), IM_COL32(255, 255, 255, 210), fps);
+        if (autosave_left_ > 0.0f)
+        {
+            draw_list->AddText(ImVec2(overlay.x + 80.0f, overlay.y + 8.0f), IM_COL32(180, 220, 160, 230), "Autosaved");
+            autosave_left_ -= GetFrameTime();
+        }
         draw_list->AddText(
             ImVec2(overlay.x + 10.0f, overlay.y + 24.0f),
             IM_COL32(200, 200, 200, 160),

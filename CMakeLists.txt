@@ -143,6 +143,7 @@ set(OPENPHYSX_SOURCES
     src/persistence/atomic_write.cpp
     src/persistence/project_file.cpp
     src/persistence/migrations.cpp
+    src/persistence/autosave.cpp
     src/persistence/project_manager.cpp
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp
@@ -193,6 +194,7 @@ add_executable(Open_PhysX_tests
     tests/project_manager.cpp
     tests/recent_files.cpp
     tests/migrations.cpp
+    tests/autosave.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
@@ -202,6 +204,7 @@ add_executable(Open_PhysX_tests
     src/persistence/atomic_write.cpp
     src/persistence/project_file.cpp
     src/persistence/migrations.cpp
+    src/persistence/autosave.cpp
     src/persistence/project_manager.cpp
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp

@@ -29,6 +29,7 @@ public:
     void New(ISimulation& simulation, CommandStack& commands);
     std::expected<LoadReport, LoadError> Open(const std::filesystem::path& path, ISimulation& simulation, CommandStack& commands);
     std::expected<LoadReport, LoadError> Revert(ISimulation& simulation, CommandStack& commands);
+    std::expected<std::string, SaveError> Snapshot(const ISimulation& simulation, const View3D& view, std::string layout) const;
     std::expected<void, SaveError> Save(ISimulation& simulation, CommandStack& commands, const View3D& view, std::string layout);
     std::expected<void, SaveError> SaveAs(
         const std::filesystem::path& path, ISimulation& simulation, CommandStack& commands, const View3D& view, std::string layout);

@@ -53,6 +53,7 @@ public:
     void commit_edit(ISimulation& simulation, const EditSnapshot& before, bool full);
     void undo(ISimulation& simulation);
     void redo(ISimulation& simulation);
+    bool modal_active() const { return modal_ != Modal::None; }
     bool can_undo() const { return commands_.CanUndo(); }
     bool can_redo() const { return commands_.CanRedo(); }
     CommandStack& commands() { return commands_; }

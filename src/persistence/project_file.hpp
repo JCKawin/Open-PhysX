@@ -13,6 +13,7 @@ class ProjectFile
 {
 public:
     static std::expected<LoadReport, LoadError> Load(const std::filesystem::path& path, Project& out);
+    static std::expected<std::string, SaveError> Serialize(const Project& project);
     static std::expected<void, SaveError> Save(const std::filesystem::path& path, const Project& project);
 };
 

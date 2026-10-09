@@ -141,6 +141,15 @@ std::expected<LoadReport, LoadError> ProjectManager::Revert(ISimulation& simulat
     return Open(path_, simulation, commands);
 }
 
+std::expected<std::string, SaveError> ProjectManager::Snapshot(
+    const ISimulation& simulation, const View3D& view, std::string layout) const
+{
+    Project project = capture(simulation, view, std::move(layout));
+    if (project.created_utc.empty())
+        project.created_utc = created_utc_.empty() ? CurrentUtcTimestamp() : created_utc_;
+    return ProjectFile::Serialize(project);
+}
+
 std::expected<void, SaveError> ProjectManager::Save(
     ISimulation& simulation, CommandStack& commands, const View3D& view, std::string layout)
 {

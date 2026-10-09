@@ -148,7 +148,7 @@ std::expected<std::string, LoadError> read_text(const std::filesystem::path& pat
 
 } // namespace
 
-std::expected<void, SaveError> ProjectFile::Save(const std::filesystem::path& path, const Project& project)
+std::expected<std::string, SaveError> ProjectFile::Serialize(const Project& project)
 {
     try
     {
@@ -158,12 +158,20 @@ std::expected<void, SaveError> ProjectFile::Save(const std::filesystem::path& pa
         document["checksum"] = payload_checksum(document);
         std::string text = document.dump(2);
         text.push_back('\n');
-        return AtomicWrite(path, text);
+        return text;
     }
     catch (const std::exception&)
     {
         return std::unexpected(SaveError{SaveError::Kind::Serialize, "The project could not be serialized."});
     }
+}
+
+std::expected<void, SaveError> ProjectFile::Save(const std::filesystem::path& path, const Project& project)
+{
+    const auto text = Serialize(project);
+    if (!text)
+        return std::unexpected(text.error());
+    return AtomicWrite(path, *text);
 }
 
 std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::path& path, Project& out)

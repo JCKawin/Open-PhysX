@@ -46,6 +46,7 @@ private:
     EditSnapshot edit_before_{};
     Editor editor_{};
     FileSession files_{};
+    float autosave_left_ = 0.0f;
 };
 
 } // namespace openphysx

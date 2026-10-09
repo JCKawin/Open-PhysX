@@ -64,6 +64,7 @@ bool save_as(FileSession& session, ISimulation& simulation, IRenderer& renderer,
         return false;
     }
     session.recent.Add(session.projects.path());
+    session.autosave.DeleteAutosaves();
     return true;
 }
 
@@ -79,6 +80,7 @@ bool save_project(FileSession& session, ISimulation& simulation, IRenderer& rend
         return false;
     }
     session.recent.Add(session.projects.path());
+    session.autosave.DeleteAutosaves();
     return true;
 }
 

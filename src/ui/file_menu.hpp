@@ -1,5 +1,6 @@
 #pragma once
 
+#include "persistence/autosave.hpp"
 #include "persistence/project_manager.hpp"
 #include "persistence/recent_files.hpp"
 
@@ -26,6 +27,7 @@ struct FileSession
 {
     ProjectManager projects;
     RecentFiles recent;
+    Autosave autosave;
     std::filesystem::path pending_path;
     FilePending pending = FilePending::None;
     bool unsaved_popup = false;
