@@ -145,6 +145,7 @@ set(OPENPHYSX_SOURCES
     src/persistence/migrations.cpp
     src/persistence/autosave.cpp
     src/persistence/recovery.cpp
+    src/persistence/sidecar.cpp
     src/persistence/project_manager.cpp
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp
@@ -197,6 +198,7 @@ add_executable(Open_PhysX_tests
     tests/migrations.cpp
     tests/autosave.cpp
     tests/recovery.cpp
+    tests/sidecar.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
@@ -208,6 +210,7 @@ add_executable(Open_PhysX_tests
     src/persistence/migrations.cpp
     src/persistence/autosave.cpp
     src/persistence/recovery.cpp
+    src/persistence/sidecar.cpp
     src/persistence/project_manager.cpp
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp

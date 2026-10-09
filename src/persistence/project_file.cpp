@@ -5,6 +5,7 @@
 #include "persistence/checksum.hpp"
 #include "persistence/migrations.hpp"
 #include "persistence/scene_serializer.hpp"
+#include "persistence/sidecar.hpp"
 
 #include <ctime>
 #include <fstream>
@@ -279,6 +280,14 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
     }
 
     LoadReport report;
+    for (const AssetRecord& asset : loaded.assets)
+    {
+        std::error_code error;
+        const std::filesystem::path file = SidecarDir(path) / std::filesystem::path(asset.path);
+        if (!std::filesystem::exists(file, error) || error)
+            report.warning("Missing asset " + asset.path + ". A placeholder will be used.");
+    }
+
     if (!document.contains("scene") || !document.at("scene").is_object())
         return std::unexpected(LoadError{LoadError::Kind::Schema, "The project has no scene."});
     if (auto scene = ReadScene(document.at("scene"), loaded.scene, report); !scene)
