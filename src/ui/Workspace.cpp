@@ -44,6 +44,7 @@ void Workspace::init()
 {
     apply_theme();
     InitFileDialogs();
+    files_.recent.Load();
 }
 
 void Workspace::shutdown()

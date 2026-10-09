@@ -1,7 +1,9 @@
 #pragma once
 
 #include "persistence/project_manager.hpp"
+#include "persistence/recent_files.hpp"
 
+#include <filesystem>
 #include <string>
 
 namespace openphysx {
@@ -15,6 +17,7 @@ enum class FilePending
     None,
     New,
     Open,
+    OpenPath,
     Exit,
     Revert,
 };
@@ -22,6 +25,8 @@ enum class FilePending
 struct FileSession
 {
     ProjectManager projects;
+    RecentFiles recent;
+    std::filesystem::path pending_path;
     FilePending pending = FilePending::None;
     bool unsaved_popup = false;
     bool error_popup = false;

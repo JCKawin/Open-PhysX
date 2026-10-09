@@ -63,6 +63,7 @@ bool save_as(FileSession& session, ISimulation& simulation, IRenderer& renderer,
         show_error(session, saved.error().message);
         return false;
     }
+    session.recent.Add(session.projects.path());
     return true;
 }
 
@@ -77,6 +78,7 @@ bool save_project(FileSession& session, ISimulation& simulation, IRenderer& rend
         show_error(session, saved.error().message);
         return false;
     }
+    session.recent.Add(session.projects.path());
     return true;
 }
 
@@ -106,7 +108,22 @@ void perform(FileSession& session, FilePending action, ISimulation& simulation, 
         if (!opened)
             show_error(session, opened.error().message);
         else
+        {
             session.apply_view = true;
+            session.recent.Add(session.projects.path());
+        }
+        break;
+    }
+    case FilePending::OpenPath:
+    {
+        const auto opened = session.projects.Open(session.pending_path, simulation, commands);
+        if (!opened)
+            show_error(session, opened.error().message);
+        else
+        {
+            session.apply_view = true;
+            session.recent.Add(session.projects.path());
+        }
         break;
     }
     case FilePending::Revert:
@@ -186,7 +203,23 @@ void DrawFileMenu(FileSession& session, ISimulation& simulation, IRenderer& rend
         request(session, FilePending::New, simulation, renderer, commands, quit);
     if (ImGui::MenuItem("Open...", "Ctrl+O"))
         request(session, FilePending::Open, simulation, renderer, commands, quit);
-    ImGui::MenuItem("Open Recent", nullptr, false, false);
+    if (ImGui::BeginMenu("Open Recent"))
+    {
+        if (session.recent.Entries().empty())
+            ImGui::MenuItem("(Empty)", nullptr, false, false);
+        for (const std::filesystem::path& entry : session.recent.Entries())
+        {
+            const std::u8string text = entry.u8string();
+            const std::string label(text.begin(), text.end());
+            const bool exists = RecentFiles::Exists(entry);
+            if (ImGui::MenuItem(label.c_str(), nullptr, false, exists))
+            {
+                session.pending_path = entry;
+                request(session, FilePending::OpenPath, simulation, renderer, commands, quit);
+            }
+        }
+        ImGui::EndMenu();
+    }
     ImGui::Separator();
     if (ImGui::MenuItem("Save", "Ctrl+S"))
         save_project(session, simulation, renderer, commands);
