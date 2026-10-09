@@ -1,6 +1,7 @@
 #include "ui/Workspace.h"
 
 #include "ecs/pose.hpp"
+#include "persistence/recovery.hpp"
 #include "ui/file_menu.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
@@ -45,10 +46,14 @@ void Workspace::init()
     apply_theme();
     InitFileDialogs();
     files_.recent.Load();
+    WriteSessionLock(files_.autosave.SessionDir());
+    InstallCrashHandler(files_.autosave.SessionDir());
 }
 
 void Workspace::shutdown()
 {
+    WriteCleanExit(files_.autosave.SessionDir());
+    RemoveSessionLock(files_.autosave.SessionDir());
     files_.autosave.DeleteAutosaves();
     ShutdownFileDialogs();
 }

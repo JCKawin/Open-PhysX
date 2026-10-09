@@ -113,6 +113,7 @@ void ProjectManager::New(ISimulation& simulation, CommandStack& commands)
     simulation.reset();
     commands.Clear();
     path_.clear();
+    recover_hint_.clear();
     created_utc_.clear();
     camera_ = {};
     layout_ini_.clear();
@@ -131,6 +132,21 @@ std::expected<LoadReport, LoadError> ProjectManager::Open(
         return std::unexpected(report.error());
     apply(simulation, std::move(loaded), commands);
     path_ = path;
+    recover_hint_.clear();
+    return std::move(report.value());
+}
+
+std::expected<LoadReport, LoadError> ProjectManager::Recover(
+    const std::filesystem::path& autosave, const std::filesystem::path& hint, ISimulation& simulation, CommandStack& commands)
+{
+    Project loaded;
+    auto report = ProjectFile::Load(autosave, loaded);
+    if (!report)
+        return std::unexpected(report.error());
+    apply(simulation, std::move(loaded), commands);
+    path_.clear();
+    recover_hint_ = hint;
+    commands.MarkDirty();
     return std::move(report.value());
 }
 

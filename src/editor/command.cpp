@@ -51,6 +51,15 @@ void CommandStack::MarkSaved()
     saved_ = revision_;
 }
 
+void CommandStack::MarkDirty()
+{
+    if (revision_ == saved_)
+    {
+        ++clock_;
+        revision_ = clock_;
+    }
+}
+
 bool CommandStack::IsDirty() const
 {
     return revision_ != saved_;

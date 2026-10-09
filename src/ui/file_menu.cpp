@@ -1,6 +1,7 @@
 #include "ui/file_menu.hpp"
 
 #include "logic/ISimulation.h"
+#include "persistence/app_data.hpp"
 #include "renderer/IRenderer.h"
 
 #include "imgui.h"
@@ -47,7 +48,15 @@ bool save_as(FileSession& session, ISimulation& simulation, IRenderer& renderer,
 {
     NFD::UniquePath chosen;
     const std::string suggested = session.projects.has_path() ? session.projects.DisplayName() : std::string("Untitled.opx");
-    const nfdresult_t result = NFD::SaveDialog(chosen, kProjectFilter, 1, nullptr, suggested.c_str());
+    std::string hint_utf8;
+    const nfdchar_t* hint = nullptr;
+    if (!session.projects.RecoverHint().empty())
+    {
+        const std::u8string text = session.projects.RecoverHint().parent_path().u8string();
+        hint_utf8.assign(reinterpret_cast<const char*>(text.data()), text.size());
+        hint = hint_utf8.c_str();
+    }
+    const nfdresult_t result = NFD::SaveDialog(chosen, kProjectFilter, 1, hint, suggested.c_str());
     if (result == NFD_CANCEL)
         return false;
     if (result != NFD_OKAY)
@@ -229,7 +238,8 @@ void DrawFileMenu(FileSession& session, ISimulation& simulation, IRenderer& rend
         save_as(session, simulation, renderer, commands);
     if (ImGui::MenuItem("Revert", nullptr, false, session.projects.has_path()))
         request(session, FilePending::Revert, simulation, renderer, commands, quit);
-    ImGui::MenuItem("Recover Autosave...", nullptr, false, false);
+    if (ImGui::MenuItem("Recover Autosave...", nullptr, false, !session.crashed.empty()))
+        session.recovery_popup = true;
     ImGui::Separator();
     if (ImGui::MenuItem("Exit", "Ctrl+Q"))
         request(session, FilePending::Exit, simulation, renderer, commands, quit);
@@ -261,6 +271,59 @@ void HandleFileShortcuts(
 
 void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool& quit)
 {
+    if (!session.recovery_scanned)
+    {
+        session.crashed = FindCrashedSessions(AppDataDir() / "autosave", session.autosave.SessionDir());
+        session.recovery_scanned = true;
+        session.recovery_popup = !session.crashed.empty();
+    }
+    if (session.recovery_popup && !session.crashed.empty())
+        ImGui::OpenPopup("Recover Autosave");
+    if (ImGui::BeginPopupModal("Recover Autosave", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        const CrashedSession& crashed = session.crashed.front();
+        ImGui::Text("OpenPhysX closed unexpectedly. Recover %s?", crashed.name.c_str());
+        ImGui::TextWrapped("%s", crashed.when.c_str());
+        if (session.crashed.size() > 1)
+            ImGui::Text("Other sessions: %d", static_cast<int>(session.crashed.size() - 1));
+        if (ImGui::Button("Recover"))
+        {
+            const auto recovered = session.projects.Recover(crashed.autosave, crashed.origin, simulation, commands);
+            std::error_code error;
+            std::filesystem::remove_all(crashed.directory, error);
+            session.crashed.erase(session.crashed.begin());
+            if (!recovered)
+                show_error(session, recovered.error().message);
+            else
+                session.apply_view = true;
+            if (session.crashed.empty())
+            {
+                session.recovery_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Discard"))
+        {
+            std::error_code error;
+            std::filesystem::remove_all(session.crashed.front().directory, error);
+            session.crashed.erase(session.crashed.begin());
+            if (session.crashed.empty())
+            {
+                session.recovery_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Decide Later"))
+        {
+            session.recovery_popup = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+
     if (session.unsaved_popup)
     {
         ImGui::OpenPopup("Unsaved Changes");

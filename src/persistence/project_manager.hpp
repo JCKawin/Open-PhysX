@@ -18,6 +18,7 @@ class ProjectManager
 public:
     bool has_path() const { return !path_.empty(); }
     const std::filesystem::path& path() const { return path_; }
+    const std::filesystem::path& RecoverHint() const { return recover_hint_; }
     const ProjectCamera& camera() const { return camera_; }
     const std::string& layout_ini() const { return layout_ini_; }
     Vec3 gravity() const { return gravity_; }
@@ -28,6 +29,8 @@ public:
 
     void New(ISimulation& simulation, CommandStack& commands);
     std::expected<LoadReport, LoadError> Open(const std::filesystem::path& path, ISimulation& simulation, CommandStack& commands);
+    std::expected<LoadReport, LoadError> Recover(
+        const std::filesystem::path& autosave, const std::filesystem::path& hint, ISimulation& simulation, CommandStack& commands);
     std::expected<LoadReport, LoadError> Revert(ISimulation& simulation, CommandStack& commands);
     std::expected<std::string, SaveError> Snapshot(const ISimulation& simulation, const View3D& view, std::string layout) const;
     std::expected<void, SaveError> Save(ISimulation& simulation, CommandStack& commands, const View3D& view, std::string layout);
@@ -39,6 +42,7 @@ private:
     void apply(ISimulation& simulation, Project project, CommandStack& commands);
 
     std::filesystem::path path_;
+    std::filesystem::path recover_hint_;
     std::string created_utc_;
     ProjectCamera camera_{};
     std::string layout_ini_;

@@ -49,6 +49,7 @@ class CommandStack
 public:
     std::uint64_t revision() const { return revision_; }
     void MarkSaved();
+    void MarkDirty();
     bool IsDirty() const;
 
     // Drops history and treats the current document as clean. Used by New and Open.

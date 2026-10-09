@@ -1,6 +1,7 @@
 #pragma once
 
 #include "persistence/autosave.hpp"
+#include "persistence/recovery.hpp"
 #include "persistence/project_manager.hpp"
 #include "persistence/recent_files.hpp"
 
@@ -34,6 +35,9 @@ struct FileSession
     bool error_popup = false;
     bool apply_view = false;
     bool reset_view = false;
+    bool recovery_scanned = false;
+    bool recovery_popup = false;
+    std::vector<CrashedSession> crashed;
     std::string error;
 };
 
