@@ -305,32 +305,7 @@ void Editor::commit_edit(ISimulation& simulation, const EditSnapshot& before, bo
         return;
     }
 
-    undo_.push_back(HistoryItem{before, full});
-    redo_.clear();
-    if (undo_.size() > 64)
-        undo_.erase(undo_.begin());
-}
-
-void Editor::restore(ISimulation& simulation, const EditSnapshot& shot, bool full)
-{
-    const bool want_play = full ? shot.state.playing : simulation.state().playing;
-    if (simulation.simulating())
-        simulation.stop();
-
-    if (full)
-        simulation.state() = shot.state;
-    else
-    {
-        const float time = simulation.state().time;
-        simulation.state() = shot.state;
-        simulation.state().time = time;
-        simulation.state().playing = false;
-    }
-
-    simulation.editor_scene() = shot.scene;
-    simulation.set_active(shot.active);
-    if (want_play)
-        simulation.play();
+    commands_.Commit(before, after, full);
 }
 
 void Editor::cancel_modal(ISimulation& simulation)
@@ -360,25 +335,13 @@ void Editor::confirm_transform(ISimulation& simulation)
 void Editor::undo(ISimulation& simulation)
 {
     cancel_modal(simulation);
-    if (undo_.empty())
-        return;
-
-    const HistoryItem item = undo_.back();
-    undo_.pop_back();
-    redo_.push_back(HistoryItem{capture(simulation), item.full});
-    restore(simulation, item.shot, item.full);
+    commands_.Undo(simulation);
 }
 
 void Editor::redo(ISimulation& simulation)
 {
     cancel_modal(simulation);
-    if (redo_.empty())
-        return;
-
-    const HistoryItem item = redo_.back();
-    redo_.pop_back();
-    undo_.push_back(HistoryItem{capture(simulation), item.full});
-    restore(simulation, item.shot, item.full);
+    commands_.Redo(simulation);
 }
 
 void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focused, bool& quit)

@@ -124,6 +124,7 @@ set(OPENPHYSX_SOURCES
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
+    src/editor/command.cpp
     src/logic/Simulation.cpp
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
@@ -164,9 +165,11 @@ add_executable(Open_PhysX_tests
     tests/test_main.cpp
     tests/ecs_scene.cpp
     tests/ecs_registry.cpp
+    tests/command_stack.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
+    src/editor/command.cpp
     src/logic/Simulation.cpp
 )
 target_include_directories(Open_PhysX_tests PRIVATE src)

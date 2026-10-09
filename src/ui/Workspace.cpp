@@ -230,8 +230,24 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
             ImGui::EndMenu();
         }
         ImGui::Separator();
-        ImGui::MenuItem("Show Grid", nullptr, &simulation.state().show_grid);
-        ImGui::MenuItem("Demo Motion", nullptr, &simulation.state().demo_motion);
+        if (ImGui::MenuItem("Show Grid", nullptr, &simulation.state().show_grid))
+        {
+            EditSnapshot before;
+            before.state = simulation.state();
+            before.state.show_grid = !simulation.state().show_grid;
+            before.scene = simulation.editor_scene();
+            before.active = simulation.active_id();
+            editor_.commit_edit(simulation, before, false);
+        }
+        if (ImGui::MenuItem("Demo Motion", nullptr, &simulation.state().demo_motion))
+        {
+            EditSnapshot before;
+            before.state = simulation.state();
+            before.state.demo_motion = !simulation.state().demo_motion;
+            before.scene = simulation.editor_scene();
+            before.active = simulation.active_id();
+            editor_.commit_edit(simulation, before, false);
+        }
         ImGui::EndMenu();
     }
 
@@ -421,7 +437,6 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
         }
         if (ImGui::Checkbox("Selected", &selected))
             SetEntitySelected(entity, selected);
-        arm_edit();
         if (transform != nullptr)
         {
             ImGui::DragFloat3("Position", &transform->position.x, 0.05f);
@@ -504,6 +519,12 @@ void Workspace::draw_animation_player(ISimulation& simulation)
     }
 
     SimulationState& state = simulation.state();
+    auto arm_edit = [&]() {
+        if (ImGui::IsItemActivated())
+            edit_before_ = editor_.frame_snapshot();
+        if (ImGui::IsItemDeactivatedAfterEdit())
+            editor_.commit_edit(simulation, edit_before_, false);
+    };
 
     if (ImGui::Button(ICON_FA_BACKWARD_STEP "##start"))
         simulation.seek(0.0f);
@@ -532,6 +553,7 @@ void Workspace::draw_animation_player(ISimulation& simulation)
 
     ImGui::SameLine();
     ImGui::Checkbox("Loop", &state.loop);
+    arm_edit();
 
     ImGui::SetNextItemWidth(-1.0f);
     float time = state.time;
@@ -540,9 +562,11 @@ void Workspace::draw_animation_player(ISimulation& simulation)
 
     ImGui::SetNextItemWidth(120.0f);
     ImGui::DragFloat("Duration", &state.duration, 0.05f, 0.1f, 120.0f, "%.2f s");
+    arm_edit();
     ImGui::SameLine();
     ImGui::SetNextItemWidth(120.0f);
     ImGui::DragFloat("Speed", &state.playback_speed, 0.05f, 0.1f, 4.0f, "%.2fx");
+    arm_edit();
 
     ImGui::End();
 }

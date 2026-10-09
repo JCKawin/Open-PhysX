@@ -1,10 +1,10 @@
 #pragma once
 
 #include "core/View.h"
+#include "editor/command.hpp"
 #include "ecs/scene.hpp"
 
 #include <string>
-#include <vector>
 
 namespace openphysx {
 
@@ -40,16 +40,7 @@ struct ViewportSample
     float height = 1.0f;
 };
 
-// Transport block plus the scene. A pose edit has to keep the active object's transform,
-// because that transform no longer lives on SimulationState.
-struct EditSnapshot
-{
-    SimulationState state{};
-    Scene scene{};
-    UUID active = kNullUuid;
-};
-
-// Keymap, modal operators, and the editor undo stack. UI code only.
+// Keymap, modal operators, and the editor command stack. UI code only.
 class Editor
 {
 public:
@@ -62,8 +53,10 @@ public:
     void commit_edit(ISimulation& simulation, const EditSnapshot& before, bool full);
     void undo(ISimulation& simulation);
     void redo(ISimulation& simulation);
-    bool can_undo() const { return !undo_.empty(); }
-    bool can_redo() const { return !redo_.empty(); }
+    bool can_undo() const { return commands_.CanUndo(); }
+    bool can_redo() const { return commands_.CanRedo(); }
+    CommandStack& commands() { return commands_; }
+    const CommandStack& commands() const { return commands_; }
 
     Tool tool = Tool::Select;
     MousePreset mouse = MousePreset::OpenPhysX;
@@ -91,13 +84,6 @@ private:
         Scale,
     };
 
-    struct HistoryItem
-    {
-        EditSnapshot shot{};
-        bool full = false;
-    };
-
-    void restore(ISimulation& simulation, const EditSnapshot& shot, bool full);
     void cancel_modal(ISimulation& simulation);
     void confirm_transform(ISimulation& simulation);
     void begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample);
@@ -107,8 +93,7 @@ private:
     void try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
 
     EditSnapshot frame_{};
-    std::vector<HistoryItem> undo_;
-    std::vector<HistoryItem> redo_;
+    CommandStack commands_;
 
     Modal modal_ = Modal::None;
     Xform xform_ = Xform::Move;
