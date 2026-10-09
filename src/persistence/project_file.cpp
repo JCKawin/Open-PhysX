@@ -7,6 +7,7 @@
 #include "persistence/scene_serializer.hpp"
 #include "persistence/sidecar.hpp"
 
+#include <cmath>
 #include <ctime>
 #include <fstream>
 #include <sstream>
@@ -232,6 +233,8 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
     loaded.created_utc = document.value("created_utc", std::string{});
     loaded.modified_utc = document.value("modified_utc", std::string{});
 
+    LoadReport report;
+
     const nlohmann::json simulation = document.value("simulation", nlohmann::json::object());
     if (simulation.is_object())
     {
@@ -245,6 +248,16 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
         loaded.grid_slices = simulation.value("grid_slices", loaded.grid_slices);
         loaded.grid_spacing = simulation.value("grid_spacing", loaded.grid_spacing);
         loaded.clear_color = simulation.value("clear_color", loaded.clear_color);
+    }
+    if (!std::isfinite(loaded.gravity.x) || !std::isfinite(loaded.gravity.y) || !std::isfinite(loaded.gravity.z))
+    {
+        loaded.gravity = Vec3{0.0f, -9.81f, 0.0f};
+        report.warning("Gravity was not finite and was reset to Earth gravity.");
+    }
+    if (!std::isfinite(loaded.timestep) || loaded.timestep <= 0.0f)
+    {
+        loaded.timestep = 0.001f;
+        report.warning("The simulation timestep was not positive and was reset to 0.001 s.");
     }
 
     const nlohmann::json editor = document.value("editor", nlohmann::json::object());
@@ -279,7 +292,6 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
         }
     }
 
-    LoadReport report;
     for (const AssetRecord& asset : loaded.assets)
     {
         std::error_code error;

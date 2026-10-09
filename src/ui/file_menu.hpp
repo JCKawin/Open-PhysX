@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ecs/load_report.hpp"
 #include "persistence/autosave.hpp"
 #include "persistence/recovery.hpp"
 #include "persistence/project_manager.hpp"
@@ -39,6 +40,8 @@ struct FileSession
     bool recovery_popup = false;
     std::vector<CrashedSession> crashed;
     std::string error;
+    LoadReport load_report;
+    bool load_report_open = false;
 };
 
 void InitFileDialogs();

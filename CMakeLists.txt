@@ -154,6 +154,7 @@ set(OPENPHYSX_SOURCES
     src/ui/Workspace.cpp
     src/ui/Editor.cpp
     src/ui/file_menu.cpp
+    src/ui/load_report_panel.cpp
 )
 
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
@@ -199,6 +200,7 @@ add_executable(Open_PhysX_tests
     tests/autosave.cpp
     tests/recovery.cpp
     tests/sidecar.cpp
+    tests/validation.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp

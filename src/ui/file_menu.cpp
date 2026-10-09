@@ -44,6 +44,15 @@ void show_error(FileSession& session, std::string message)
     session.error_popup = true;
 }
 
+// Warnings from a successful load surface in the Load Report panel.
+void keep_report(FileSession& session, LoadReport&& report)
+{
+    if (report.entries.empty())
+        return;
+    session.load_report = std::move(report);
+    session.load_report_open = true;
+}
+
 bool save_as(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands)
 {
     NFD::UniquePath chosen;
@@ -115,35 +124,40 @@ void perform(FileSession& session, FilePending action, ISimulation& simulation, 
             show_error(session, NFD::GetError() != nullptr ? NFD::GetError() : "The open dialog could not be opened.");
             break;
         }
-        const auto opened = session.projects.Open(path_from_dialog(chosen.get()), simulation, commands);
+        auto opened = session.projects.Open(path_from_dialog(chosen.get()), simulation, commands);
         if (!opened)
             show_error(session, opened.error().message);
         else
         {
             session.apply_view = true;
             session.recent.Add(session.projects.path());
+            keep_report(session, std::move(*opened));
         }
         break;
     }
     case FilePending::OpenPath:
     {
-        const auto opened = session.projects.Open(session.pending_path, simulation, commands);
+        auto opened = session.projects.Open(session.pending_path, simulation, commands);
         if (!opened)
             show_error(session, opened.error().message);
         else
         {
             session.apply_view = true;
             session.recent.Add(session.projects.path());
+            keep_report(session, std::move(*opened));
         }
         break;
     }
     case FilePending::Revert:
     {
-        const auto reverted = session.projects.Revert(simulation, commands);
+        auto reverted = session.projects.Revert(simulation, commands);
         if (!reverted)
             show_error(session, reverted.error().message);
         else
+        {
             session.apply_view = true;
+            keep_report(session, std::move(*reverted));
+        }
         break;
     }
     case FilePending::Exit:
@@ -288,14 +302,17 @@ void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& re
             ImGui::Text("Other sessions: %d", static_cast<int>(session.crashed.size() - 1));
         if (ImGui::Button("Recover"))
         {
-            const auto recovered = session.projects.Recover(crashed.autosave, crashed.origin, simulation, commands);
+            auto recovered = session.projects.Recover(crashed.autosave, crashed.origin, simulation, commands);
             std::error_code error;
             std::filesystem::remove_all(crashed.directory, error);
             session.crashed.erase(session.crashed.begin());
             if (!recovered)
                 show_error(session, recovered.error().message);
             else
+            {
                 session.apply_view = true;
+                keep_report(session, std::move(*recovered));
+            }
             if (session.crashed.empty())
             {
                 session.recovery_popup = false;

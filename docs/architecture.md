@@ -37,12 +37,17 @@ flowchart TB
 | `src/Application.h/.cpp` | Window, ImGui bootstrap, fixed-step loop, ownership | raylib, rlImGui, the three subsystems |
 | `src/core/Types.h` | POD math, `Quat`, `RigidBody`, `SimulationState` | nothing else |
 | `src/core/Math.h` / `View.h` | Quat, turntable view, project, zoom-to-cursor | `Types.h` only |
+| `src/ecs/` | `Scene` (one EnTT registry), `Entity`, UUID, component registry, POD components | EnTT, `core/Types.h`, nlohmann/json in serializers only |
+| `src/editor/command.hpp/.cpp` | `CommandStack` with a revision counter; every user edit is a command | `ISimulation`, `Scene` snapshots |
+| `src/persistence/` | scene serializer, atomic write, checksum, project file, migrations, autosave, recovery, project manager, recent files, sidecar | `Scene`, JSON, std::filesystem |
 | `src/logic/ISimulation.h` | Logic contract | `core/Types.h` only |
-| `src/logic/Simulation.h/.cpp` | Timeline + demo motion | `ISimulation` |
+| `src/logic/Simulation.h/.cpp` | Editor scene ↔ runtime scene for Play/Stop, demo motion | `ISimulation`, `Scene` |
 | `src/renderer/IRenderer.h` | Render contract | **currently `raylib.h` — leak** |
 | `src/renderer/Renderer.h/.cpp` | FBO, orbit camera, `DrawCube` | `ISimulation`, raylib |
-| `src/ui/Workspace.h/.cpp` | Dockspace, menus, property panels | `ISimulation`, `IRenderer`, ImGui, raylib for FPS |
+| `src/ui/Workspace.h/.cpp` | Dockspace, menus, property panels, load report panel | `ISimulation`, `IRenderer`, ImGui, raylib for FPS |
 | `src/ui/Editor.h/.cpp` | Keymap, modal operators, undo stack | `ISimulation`, `IRenderer`, raylib keys |
+| `src/ui/file_menu.cpp` | File menu, native dialogs, save prompts, recovery modal | NFD, `ProjectManager`, `Autosave`, ImGui |
+| `src/ui/load_report_panel.cpp` | Load Report window (severity-colored warnings) | `LoadReport`, ImGui only |
 
 Dependency direction that must hold as the project grows:
 
@@ -91,6 +96,23 @@ Implemented by `Renderer` (non-copyable). `init` loads a 16×16 placeholder FBO;
 No interface yet. `draw(ISimulation&, IRenderer&)` is the whole surface. It does **not** call `step` — `Application` does. It may call `reset`, `seek`, and mutate `state()`.
 
 Quit is not the raylib ESC key (`SetExitKey(KEY_NULL)`). It is `Ctrl+Q`, the File menu, or the Quit item on the menu bar.
+
+### `Scene` (ECS, `src/ecs/`)
+
+One `Scene` owns one `entt::registry` (pinned `v3.15.0`). Everything is created through `Scene::CreateEntity` / `CreateEntityWithUUID`, which add `IDComponent` (UUID), `TagComponent`, `TransformComponent`, and `RelationshipComponent`, and keep an `unordered_map<UUID, entt::entity>` in sync via `on_construct/on_destroy<IDComponent>` signals. Entities are **never** referenced by `entt::entity` across sessions — the stable identity is the UUID.
+
+- Components are POD-like structs split into *saved* and *runtime* (`MeshGpuHandle`, `PhysicsBodyHandle`, `ContactCache`, `CfdResultField`, `SelectionOutlineTag`). Runtime ones are never serialized and are dropped by `Scene::Copy`.
+- `Scene` is copyable via the component registry's `copy` hooks and preserves UUIDs. Play = copy the editor scene into a runtime scene; Stop = discard the copy. The project file always saves the editor scene.
+- `DestroyEntity` is deferred; `FlushDestroyed()` runs once per frame so destruction is safe during iteration. Destroying a parent destroys its children.
+- References between entities (parent, joint bodies, robot links) are UUIDs, resolved by `FindByUUID` after a load ("resolve references" pass, A5/A7 of the agent instructions). Dangling references are warnings in the `LoadReport`.
+
+### `ComponentRegistry` (`src/ecs/component_registry.cpp`)
+
+One registration line per component provides `name`, `version`, `has`, `serialize`, `deserialize`, `copy`, `equals`, `remove`, and `serializable`. Scene save, scene copy, entity duplication, and equality all iterate this registry, so a new saved component only needs to be registered once. Enums serialize as strings (`"Revolute"`, `"KeEpsilon"`), never integers.
+
+### `ProjectManager` (`src/persistence/project_manager.cpp`)
+
+Holds the current path, the `CommandStack` revision (dirty = `revision() != savedRevision`), the camera and layout snapshot, and the bridge between the live editor scene and the `.opx` file. Loads into a temporary `Project` and swaps on success, so a failed open never touches the current project. File format, atomic save, autosave, and recovery are documented in [persistence.md](persistence.md).
 
 ## Frame
 
@@ -155,6 +177,8 @@ The renderer converts at the edge: `Vec3` → `Vector3`, `Rgb` → `Color` (clam
 
 One `RigidBody` as an AoS struct is correct for the scaffold. A solver that should fill a workstation needs SoA chunks; that change stays behind `ISimulation` (see [hardware.md](hardware.md)).
 
+**The currently edited scene is an EnTT registry**, not a fixed `cube` struct: `Simulation.editor_scene()` holds the authored scene and `Simulation.scene()` is the runtime (play-mode) copy. The old `RigidBody cube` state still exists for the demo playback clock and the viewport draw; the ECS components listed under `Scene` above are where new content goes. `core/Types.h` remains the shared POD vocabulary between the three subsystems.
+
 ## UI
 
 Default dock (from `Workspace::apply_default_layout`):
@@ -175,7 +199,9 @@ Default dock (from `Workspace::apply_default_layout`):
 
 `ui/Editor.cpp` holds the keymap tables, the modal operators, and a 64-step undo stack. Object mode is the only mode. `G` move, `R` rotate, `S` scale. `X` / `Y` / `Z` lock an axis (press again for the body's local axis). Shift is precise, Ctrl snaps, digits type a value, Enter confirms, Esc cancels. `H` hides the cube, Alt+`H` shows it, `X` hides it. Alt+`G` / `R` / `S` clear location, rotation, and scale. Ctrl+`Z` undoes, Ctrl+Shift+`Z` redoes. Transport time is kept across edit undo. Reset Simulation is a full undo step, so it restores the playhead too.
 
-File Open/Save stay disabled. There is still one cube, no mesh edit mode, and no gizmo drawn in the viewport. The tool drag and the keys edit the authored pose directly.
+File Open/Save use native dialogs via **nativefiledialog-extended**. The File menu has New (`Ctrl+N`), Open (`Ctrl+O`), Open Recent (last ten, stored in the OS app-data dir), Save (`Ctrl+S`), Save As (`Ctrl+Shift+S`), Revert, Recover Autosave…, and Exit. The window title is `OpenPhysX - <name>.opx*` (asterisk when dirty, `Untitled` when no path). New / Open / Exit while dirty shows a **Save / Don't Save / Cancel** modal; Esc is disabled. Failed loads keep the current project and show an error modal with an option to Save As elsewhere. Autosave runs on a background thread, and a crashed session is offered back through the **Recover Autosave** modal on launch. Non-fatal load warnings appear in the **Load Report** panel.
+
+There is still one cube, no mesh edit mode, and no gizmo drawn in the viewport. The tool drag and the keys edit the authored pose directly.
 
 ImGui docking and keyboard nav are on. Theme is a dark grey chrome with accent `#E89E3E` (the same orange used for “app shell” in the diagrams).
 
@@ -186,6 +212,10 @@ ImGui docking and keyboard nav are on. Theme is a dark grey chrome with accent `
 | raylib 6.0 | `find_package` or FetchContent tarball | Window, GL, input, 3D primitives, FBO |
 | Dear ImGui | vendored `external/imgui` static lib (includes `imgui_demo.cpp`) | Docking UI |
 | rlImGui | FetchContent git tag `Raylib_6_0` | ImGui ↔ raylib |
+| EnTT `v3.15.0` | FetchContent tarball (pinned, not `master`) | Entity registry, signals |
+| nlohmann/json `v3.11.3` | FetchContent tarball (pinned) | Project/scene serialization |
+| doctest `v2.4.11` | FetchContent tarball, wired into CTest | Test framework |
+| nativefiledialog-extended `v1.2.1` | FetchContent tarball | Native Open/Save dialogs |
 
 `BUILD_SHARED_LIBS` is forced off. `compile_commands.json` is on.
 
@@ -200,3 +230,29 @@ ImGui docking and keyboard nav are on. Theme is a dark grey chrome with accent `
 | Headless step | do not call `InitWindow`; need a null `IRenderer` and no ImGui | 04 Backend stack |
 
 If a change makes `logic/` include `raylib.h`, it is the wrong change.
+
+## Design decisions, deviations, and known limitations
+
+Recorded per the OpenPhysX agent instructions (Part A/B). Deviations are the places where the code deliberately chose something other than the document's default option.
+
+**Design decisions**
+
+- **EnTT pinned at `v3.15.0`** and **nlohmann/json `v3.11.3`** via FetchContent tarballs — never `master`.
+- One collider per entity; a multi-shape body uses child entities each with a `ColliderComponent` (the "document it" option for A4).
+- Mass is forced positive **only for Dynamic bodies**; static/kinematic bodies keep an authored zero mass so saving an imported file stays byte-identical (B2.4).
+- `Scene::Copy` uses the registry `copy` hooks and preserves UUIDs; runtime components are dropped, so Play/Stop never leaks solver/GPU handles into the editor scene.
+- Validation is one growable pass (`validate_scene`) instead of checks scattered across `from_json`; every repair lands in the `LoadReport` and is what gets saved back.
+
+**Deviations from the instructions**
+
+- The document sketched a `RelationshipComponent::children` mirror; the implementation writes both `parent` and `children` and repairs either side on load (missing children pruned, missing parent cleared).
+- UI modals are ImGui popups driven from `file_menu.cpp` rather than a separate `load_report_panel` singleton; the Load Report window itself is its own file as the doc's layout suggested.
+- The OLD VS NEW split for `renderer/IRenderer.h` (raylib leak) predates the ECS work and is left as-is — fixing it is unrelated to persistence.
+
+**Known limitations (v0.1.0)**
+
+- A corrupt **file** that still parses to valid JSON with a valid checksum is not detectable; only checksum/parse/schema failures are.
+- Non-finite numbers cannot exist in a strict JSON file (nlohmann rejects `1e999`), so validation on NaN/Inf matters for hand-edited or future-migrated files, not for files written by this version.
+- The demo playback still drives a single `RigidBody` cube; the ECS scene is where new entities live but there is no physics solver pulling components into `Simulation` yet.
+- Undo snapshots serialize the scene through the registry — correct today, and roughly O(scene) per property edit.
+- `docs/*.drawio` diagrams still show the pre-ECS module map (documented, not fatal).

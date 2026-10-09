@@ -1,10 +1,14 @@
 #include "persistence/scene_serializer.hpp"
 
 #include "ecs/component_registry.hpp"
+#include "ecs/components/cfd.hpp"
 #include "ecs/components/physics.hpp"
+#include "ecs/components/primitive.hpp"
+#include "ecs/components/render.hpp"
 #include "ecs/components/robot.hpp"
 #include "ecs/components/serialize.hpp"
 
+#include <cmath>
 #include <unordered_set>
 
 namespace openphysx {
@@ -144,6 +148,209 @@ void resolve_references(Scene& scene, LoadReport& report)
     }
 }
 
+bool finite(float value)
+{
+    return std::isfinite(value);
+}
+
+bool finite(const Vec3& value)
+{
+    return finite(value.x) && finite(value.y) && finite(value.z);
+}
+
+bool finite(const Quat& value)
+{
+    return finite(value.x) && finite(value.y) && finite(value.z) && finite(value.w);
+}
+
+bool finite(const Rgb& value)
+{
+    return finite(value.r) && finite(value.g) && finite(value.b);
+}
+
+bool usable_quat(const Quat& value)
+{
+    if (!finite(value))
+        return false;
+    const float length2 = value.x * value.x + value.y * value.y + value.z * value.z + value.w * value.w;
+    return length2 > 1e-12f;
+}
+
+void check_finite(float& value, float fallback, const std::string& name, const char* field, LoadReport& report)
+{
+    if (finite(value))
+        return;
+    value = fallback;
+    report.warning(name + " " + field + " was not finite and was reset.");
+}
+
+void check_finite(Vec3& value, const Vec3& fallback, const std::string& name, const char* field, LoadReport& report)
+{
+    if (finite(value))
+        return;
+    value = fallback;
+    report.warning(name + " " + field + " was not finite and was reset.");
+}
+
+void check_finite(Rgb& value, const Rgb& fallback, const std::string& name, const char* field, LoadReport& report)
+{
+    if (finite(value))
+        return;
+    value = fallback;
+    report.warning(name + " " + field + " was not finite and was reset.");
+}
+
+void check_quat(Quat& value, const std::string& name, const char* field, LoadReport& report)
+{
+    if (usable_quat(value))
+        return;
+    value = Quat{};
+    report.warning(name + " " + field + " was not a usable rotation and was reset.");
+}
+
+void check_size(Vec3& value, const Vec3& fallback, const std::string& name, const char* field, LoadReport& report)
+{
+    bool bad = false;
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        float& component = (&value.x)[axis];
+        if (finite(component) && component > 0.0f)
+            continue;
+        component = (&fallback.x)[axis];
+        bad = true;
+    }
+    if (bad)
+        report.warning(name + " " + field + " had a non-positive size and was reset.");
+}
+
+void check_positive(float& value, float fallback, const std::string& name, const char* field, LoadReport& report)
+{
+    if (finite(value) && value > 0.0f)
+        return;
+    value = fallback;
+    report.warning(name + " " + field + " was not positive and was reset.");
+}
+
+void check_axis(Vec3& value, const std::string& name, const char* field, LoadReport& report)
+{
+    if (finite(value) && (value.x != 0.0f || value.y != 0.0f || value.z != 0.0f))
+        return;
+    value = Vec3{0.0f, 1.0f, 0.0f};
+    report.warning(name + " " + field + " had no direction and was reset.");
+}
+
+// Loaded numbers are untrusted. Anything non-finite or physically impossible is
+// replaced with the component default and noted in the load report. Mass is only
+// forced positive for dynamic bodies: a static or kinematic body may carry a zero
+// mass from an exporter and must keep it so re-saving stays byte identical.
+void validate_scene(Scene& scene, LoadReport& report)
+{
+    for (const UUID id : scene.CreationOrder())
+    {
+        Entity entity = scene.FindByUUID(id);
+        if (!entity)
+            continue;
+        const std::string name = entity.Has<TagComponent>() ? entity.Get<TagComponent>().name : std::string("Entity");
+
+        if (entity.Has<TransformComponent>())
+        {
+            TransformComponent& transform = entity.Get<TransformComponent>();
+            check_finite(transform.position, Vec3{}, name, "position", report);
+            check_finite(transform.scale, Vec3{1.0f, 1.0f, 1.0f}, name, "scale", report);
+            check_quat(transform.rotation, name, "rotation", report);
+        }
+        if (entity.Has<PrimitiveBoxComponent>())
+        {
+            PrimitiveBoxComponent& box = entity.Get<PrimitiveBoxComponent>();
+            check_size(box.size, Vec3{2.0f, 2.0f, 2.0f}, name, "box size", report);
+            check_finite(box.color, Rgb{0.15f, 0.35f, 0.85f}, name, "box color", report);
+        }
+        if (entity.Has<MaterialOverrideComponent>())
+        {
+            MaterialOverrideComponent& material = entity.Get<MaterialOverrideComponent>();
+            check_finite(material.albedo, Rgb{1.0f, 1.0f, 1.0f}, name, "albedo", report);
+            check_finite(material.roughness, 0.5f, name, "roughness", report);
+            check_finite(material.metallic, 0.0f, name, "metallic", report);
+        }
+        if (entity.Has<RigidBodyComponent>())
+        {
+            RigidBodyComponent& body = entity.Get<RigidBodyComponent>();
+            if (!finite(body.mass) || (body.type == BodyType::Dynamic && body.mass <= 0.0f))
+            {
+                body.mass = 1.0f;
+                report.warning(name + " mass was not a positive value and was reset to 1.");
+            }
+            bool inertia_ok = true;
+            for (const float entry : body.inertia.m)
+                inertia_ok = inertia_ok && finite(entry);
+            if (!inertia_ok)
+            {
+                body.inertia = Mat3{};
+                report.warning(name + " inertia was not finite and was reset to identity.");
+            }
+            check_finite(body.linearVelocity, Vec3{}, name, "linear velocity", report);
+            check_finite(body.angularVelocity, Vec3{}, name, "angular velocity", report);
+            check_finite(body.linearDamping, 0.0f, name, "linear damping", report);
+            check_finite(body.angularDamping, 0.05f, name, "angular damping", report);
+        }
+        if (entity.Has<ColliderComponent>())
+        {
+            ColliderComponent& collider = entity.Get<ColliderComponent>();
+            if (collider.shape == ShapeType::Box)
+                check_size(collider.halfExtents, Vec3{1.0f, 1.0f, 1.0f}, name, "collider half extents", report);
+            if (collider.shape == ShapeType::Sphere || collider.shape == ShapeType::Capsule ||
+                collider.shape == ShapeType::Cylinder)
+                check_positive(collider.radius, 0.5f, name, "collider radius", report);
+            if (collider.shape == ShapeType::Capsule || collider.shape == ShapeType::Cylinder)
+                check_positive(collider.height, 1.0f, name, "collider height", report);
+            check_finite(collider.offset, Vec3{}, name, "collider offset", report);
+            check_quat(collider.rotation, name, "collider rotation", report);
+        }
+        if (entity.Has<PhysicsMaterialComponent>())
+        {
+            PhysicsMaterialComponent& material = entity.Get<PhysicsMaterialComponent>();
+            check_finite(material.friction, 0.5f, name, "friction", report);
+            check_finite(material.restitution, 0.0f, name, "restitution", report);
+            check_finite(material.rollingFriction, 0.0f, name, "rolling friction", report);
+        }
+        if (entity.Has<JointComponent>())
+        {
+            JointComponent& joint = entity.Get<JointComponent>();
+            check_finite(joint.anchorA, Vec3{}, name, "joint anchor A", report);
+            check_finite(joint.anchorB, Vec3{}, name, "joint anchor B", report);
+            check_axis(joint.axisA, name, "joint axis A", report);
+            check_axis(joint.axisB, name, "joint axis B", report);
+            check_finite(joint.limitMin, 0.0f, name, "joint limit min", report);
+            check_finite(joint.limitMax, 0.0f, name, "joint limit max", report);
+            check_finite(joint.motorTarget, 0.0f, name, "joint motor target", report);
+            check_finite(joint.motorMaxForce, 0.0f, name, "joint motor force", report);
+        }
+        if (entity.Has<CfdDomainComponent>())
+        {
+            CfdDomainComponent& domain = entity.Get<CfdDomainComponent>();
+            check_finite(domain.boundsMin, Vec3{-1.0f, -1.0f, -1.0f}, name, "CFD bounds min", report);
+            check_finite(domain.boundsMax, Vec3{1.0f, 1.0f, 1.0f}, name, "CFD bounds max", report);
+            if (domain.resolutionX <= 0 || domain.resolutionY <= 0 || domain.resolutionZ <= 0)
+            {
+                if (domain.resolutionX <= 0)
+                    domain.resolutionX = 32;
+                if (domain.resolutionY <= 0)
+                    domain.resolutionY = 32;
+                if (domain.resolutionZ <= 0)
+                    domain.resolutionZ = 32;
+                report.warning(name + " CFD resolution was not positive and was reset.");
+            }
+            check_positive(domain.density, 1.2f, name, "CFD density", report);
+            check_positive(domain.viscosity, 1.8e-5f, name, "CFD viscosity", report);
+            for (BoundaryCondition& boundary : domain.boundaries)
+            {
+                check_finite(boundary.velocity, Vec3{}, name, "boundary velocity", report);
+                check_finite(boundary.pressure, 0.0f, name, "boundary pressure", report);
+            }
+        }
+    }
+}
+
 } // namespace
 
 nlohmann::json WriteScene(const Scene& scene)
@@ -260,6 +467,7 @@ std::expected<void, LoadError> ReadScene(const nlohmann::json& json, Scene& scen
     }
 
     resolve_references(loaded, report);
+    validate_scene(loaded, report);
     scene = std::move(loaded);
     return {};
 }

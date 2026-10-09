@@ -3,6 +3,7 @@
 #include "ecs/pose.hpp"
 #include "persistence/recovery.hpp"
 #include "ui/file_menu.hpp"
+#include "ui/load_report_panel.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
 
@@ -165,6 +166,7 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
     draw_properties(simulation, renderer);
     draw_animation_player(simulation);
     draw_tools(simulation, renderer);
+    DrawLoadReportPanel(files_);
 
     if (show_demo_)
         ImGui::ShowDemoWindow(&show_demo_);
@@ -202,6 +204,7 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
         ImGui::MenuItem("Properties", nullptr, &show_properties_);
         ImGui::MenuItem("Animation Player", nullptr, &show_animation_);
         ImGui::MenuItem("Tools", nullptr, &show_tools_);
+        ImGui::MenuItem("Load Report", nullptr, &files_.load_report_open, !files_.load_report.entries.empty());
         ImGui::Separator();
         if (ImGui::MenuItem("Reset Layout"))
         {

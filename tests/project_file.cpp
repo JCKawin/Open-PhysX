@@ -1,6 +1,7 @@
 #include "persistence/atomic_write.hpp"
 #include "persistence/checksum.hpp"
 #include "persistence/project_file.hpp"
+#include "persistence/sidecar.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -95,7 +96,16 @@ TEST_CASE("project save is checksummed, atomic, and stable apart from the timest
 {
     const fs::path dir = test_dir("openphysx-project");
     const fs::path file = dir / "Robot.opx";
-    const Project project = sample_project();
+    const fs::path source = dir / "arm.obj";
+    {
+        std::ofstream output(source, std::ios::binary);
+        output << "o arm\n";
+    }
+    // Import the asset so the sidecar exists and the load has no warnings.
+    const auto imported = ImportAsset(file, source, 0xB2ull);
+    REQUIRE(imported.has_value());
+    Project project = sample_project();
+    project.assets.front() = *imported;
     REQUIRE(ProjectFile::Save(file, project));
     REQUIRE(ProjectFile::Save(file, project));
     CHECK(normalized(file) == normalized(file.wstring() + L".bak"));
@@ -157,6 +167,97 @@ TEST_CASE("project save is checksummed, atomic, and stable apart from the timest
 
     const auto missing = ProjectFile::Load(dir / "missing.opx", ignored);
     CHECK(missing.error().kind == LoadError::Kind::NotFound);
+
+    std::error_code error;
+    fs::remove_all(dir, error);
+}
+
+TEST_CASE("truncated bit-flipped and deeply nested projects fail cleanly")
+{
+    const fs::path dir = test_dir("openphysx-corrupt");
+    const fs::path file = dir / "Robot.opx";
+    const Project project = sample_project();
+    REQUIRE(ProjectFile::Save(file, project));
+    const std::string original = read_file(file);
+
+    Project current = sample_project();
+    const UUID keep = current.scene.CreateEntity("Keep").GetUUID();
+
+    // Truncated in the middle of the payload.
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output << original.substr(0, original.size() / 2);
+    }
+    const auto truncated = ProjectFile::Load(file, current);
+    CHECK_FALSE(truncated.has_value());
+    CHECK(truncated.error().kind == LoadError::Kind::Corrupt);
+    CHECK(current.scene.FindByUUID(keep));
+
+    // A bit flip inside the scene: the JSON stays valid, the checksum does not.
+    std::string flipped = original;
+    const std::string::size_type scene_at = flipped.find("\"scene\"");
+    REQUIRE(scene_at != std::string::npos);
+    const std::string::size_type digit = flipped.find("1.0", scene_at);
+    REQUIRE(digit != std::string::npos);
+    flipped[digit] = '2';
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output << flipped;
+    }
+    const auto tampered = ProjectFile::Load(file, current);
+    CHECK_FALSE(tampered.has_value());
+    CHECK(tampered.error().kind == LoadError::Kind::Corrupt);
+    CHECK(current.scene.FindByUUID(keep));
+
+    // Absurd nesting is refused before it can recurse anywhere dangerous.
+    std::string deep = "{\"magic\":\"OPX\",\"format_version\":1,\"scene\":{\"entities\":[],\"pad\":";
+    deep += std::string(100, '[');
+    deep += std::string(100, ']');
+    deep += "}}";
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output << deep;
+    }
+    const auto nested = ProjectFile::Load(file, current);
+    CHECK_FALSE(nested.has_value());
+    CHECK(nested.error().kind == LoadError::Kind::Schema);
+    CHECK(current.scene.FindByUUID(keep));
+
+    std::error_code error;
+    fs::remove_all(dir, error);
+}
+
+TEST_CASE("an invalid timestep falls back to the default with a warning")
+{
+    const fs::path dir = test_dir("openphysx-simvalid");
+    const fs::path file = dir / "Robot.opx";
+    const Project project = sample_project();
+    REQUIRE(ProjectFile::Save(file, project));
+
+    nlohmann::json doc = nlohmann::json::parse(read_file(file));
+    doc["simulation"]["timestep"] = -1.0;
+    nlohmann::json copy = doc;
+    copy.erase("checksum");
+    copy.erase("modified_utc");
+    doc["checksum"] = FormatChecksum(Xxh64(copy.dump()));
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output << doc.dump(2) << "\n";
+    }
+
+    Project loaded;
+    const auto report = ProjectFile::Load(file, loaded);
+    REQUIRE(report.has_value());
+    CHECK(loaded.timestep == doctest::Approx(0.001f));
+    CHECK(loaded.gravity.y == doctest::Approx(-9.81f));
+
+    bool saw_timestep = false;
+    for (const LoadReport::Entry& entry : report->entries)
+    {
+        if (entry.message.find("timestep") != std::string::npos)
+            saw_timestep = true;
+    }
+    CHECK(saw_timestep);
 
     std::error_code error;
     fs::remove_all(dir, error);

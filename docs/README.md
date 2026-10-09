@@ -10,6 +10,7 @@ This folder is the maintained explanation of the software: what exists now, how 
 | --- | --- |
 | A map of every doc and which source it tracks | [diagrams/00-doc-map.drawio](diagrams/00-doc-map.drawio) + this page |
 | What the program *is* today (modules, files, UI) | [architecture.md](architecture.md) + [01](diagrams/01-system-architecture.drawio) + [02](diagrams/02-runtime-loop.drawio) |
+| Project files, atomic save, autosave, crash recovery | [persistence.md](persistence.md) |
 | How CMake pulls raylib / ImGui and produces a binary | [diagrams/03-build-graph.drawio](diagrams/03-build-graph.drawio) |
 | Run on Windows, Linux, macOS, the web, and headless | [portability.md](portability.md) + [04](diagrams/04-portability.drawio) |
 | Saturate CPU cores, SIMD, and GPU compute | [hardware.md](hardware.md) + [05](diagrams/05-hardware.drawio) |
