@@ -1,0 +1,105 @@
+{
+  "app_version": "0.1.0",
+  "assets": [],
+  "checksum": "xxh64:c075d81d9c830099",
+  "created_utc": "2026-10-10T00:00:00Z",
+  "editor": {
+    "camera": {
+      "distance": 6.40312385559082,
+      "fovy_deg": 45.0,
+      "offset": [
+        0.0,
+        -1.0,
+        0.0
+      ],
+      "orthographic": false,
+      "rotation": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "layout_ini": "",
+    "selection": []
+  },
+  "format_version": 1,
+  "magic": "OPX",
+  "modified_utc": "2026-10-09T20:25:19Z",
+  "scene": {
+    "entities": [
+      {
+        "components": {
+          "EditorState": {
+            "locked": false,
+            "visible": true
+          },
+          "PrimitiveBox": {
+            "color": [
+              0.15000000596046448,
+              0.3499999940395355,
+              0.8500000238418579
+            ],
+            "size": [
+              2.0,
+              2.0,
+              2.0
+            ]
+          },
+          "Relationship": {
+            "children": [],
+            "parent": "0000000000000000"
+          },
+          "Tag": {
+            "name": "Cube"
+          },
+          "Transform": {
+            "position": [
+              0.0,
+              1.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        "id": "000000000000c0be"
+      }
+    ]
+  },
+  "simulation": {
+    "clear_color": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.14000000059604645
+    ],
+    "demo_motion": true,
+    "duration": 10.0,
+    "gravity": [
+      0.0,
+      -9.8100004196167,
+      0.0
+    ],
+    "grid_slices": 20,
+    "grid_spacing": 1.0,
+    "loop": true,
+    "playback_speed": 1.0,
+    "show_grid": true,
+    "timestep": 0.0010000000474974513
+  },
+  "units": {
+    "angle": "rad",
+    "length": "m",
+    "mass": "kg",
+    "time": "s"
+  }
+}

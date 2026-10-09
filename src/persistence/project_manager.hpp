@@ -2,6 +2,7 @@
 
 #include "core/View.h"
 #include "editor/command.hpp"
+#include "persistence/migrations.hpp"
 #include "persistence/project_file.hpp"
 
 #include <expected>
@@ -42,6 +43,8 @@ private:
     std::string layout_ini_;
     Vec3 gravity_{0.0f, -9.81f, 0.0f};
     float timestep_ = 0.001f;
+    int source_version_ = Project::kFormatVersion;
+    bool archived_migration_ = true;
 };
 
 } // namespace openphysx

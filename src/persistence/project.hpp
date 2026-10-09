@@ -50,6 +50,7 @@ struct Project
     std::string created_utc;
     std::string modified_utc;
     int format_version = kFormatVersion;
+    int source_version = kFormatVersion;
 };
 
 } // namespace openphysx

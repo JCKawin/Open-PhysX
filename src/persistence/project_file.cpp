@@ -3,6 +3,7 @@
 #include "ecs/components/serialize.hpp"
 #include "persistence/atomic_write.hpp"
 #include "persistence/checksum.hpp"
+#include "persistence/migrations.hpp"
 #include "persistence/scene_serializer.hpp"
 
 #include <ctime>
@@ -188,16 +189,12 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
     if (too_deep(document, 0))
         return std::unexpected(LoadError{LoadError::Kind::Schema, "This file is nested too deeply to open."});
 
+    int source_version = 0;
+    auto migrated = MigrateProject(std::move(document), source_version);
+    if (!migrated)
+        return std::unexpected(migrated.error());
+    document = std::move(migrated.value());
     const int version = document.value("format_version", 0);
-    if (version > Project::kFormatVersion)
-    {
-        return std::unexpected(LoadError{
-            LoadError::Kind::TooNew,
-            "This project was created by a newer version of OpenPhysX.",
-        });
-    }
-    if (version != Project::kFormatVersion)
-        return std::unexpected(LoadError{LoadError::Kind::Schema, "This project uses a format OpenPhysX does not understand."});
 
     const std::string checksum = document.value("checksum", std::string{});
     std::string expected;
@@ -222,6 +219,7 @@ std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::pa
 
     Project loaded;
     loaded.format_version = version;
+    loaded.source_version = source_version;
     loaded.created_utc = document.value("created_utc", std::string{});
     loaded.modified_utc = document.value("modified_utc", std::string{});
 

@@ -100,6 +100,8 @@ void ProjectManager::apply(ISimulation& simulation, Project project, CommandStac
 
     gravity_ = project.gravity;
     timestep_ = project.timestep;
+    source_version_ = project.source_version;
+    archived_migration_ = source_version_ >= Project::kFormatVersion;
     camera_ = project.camera;
     layout_ini_ = std::move(project.layout_ini);
     created_utc_ = std::move(project.created_utc);
@@ -116,6 +118,8 @@ void ProjectManager::New(ISimulation& simulation, CommandStack& commands)
     layout_ini_.clear();
     gravity_ = {0.0f, -9.81f, 0.0f};
     timestep_ = 0.001f;
+    source_version_ = Project::kFormatVersion;
+    archived_migration_ = true;
 }
 
 std::expected<LoadReport, LoadError> ProjectManager::Open(
@@ -144,6 +148,12 @@ std::expected<void, SaveError> ProjectManager::Save(
         return std::unexpected(SaveError{SaveError::Kind::Serialize, "Choose a file name before saving."});
     if (created_utc_.empty())
         created_utc_ = CurrentUtcTimestamp();
+    if (!archived_migration_ && source_version_ < Project::kFormatVersion)
+    {
+        if (auto archived = ArchiveMigratedOriginal(path_, source_version_); !archived)
+            return std::unexpected(archived.error());
+        archived_migration_ = true;
+    }
 
     const Project project = capture(simulation, view, std::move(layout));
     if (auto saved = ProjectFile::Save(path_, project); !saved)
