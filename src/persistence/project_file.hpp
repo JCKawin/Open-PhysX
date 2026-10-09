@@ -16,4 +16,6 @@ public:
     static std::expected<void, SaveError> Save(const std::filesystem::path& path, const Project& project);
 };
 
+std::string CurrentUtcTimestamp();
+
 } // namespace openphysx

@@ -10,9 +10,8 @@
 #include <sstream>
 
 namespace openphysx {
-namespace {
 
-std::string utc_now()
+std::string CurrentUtcTimestamp()
 {
     const std::time_t now = std::time(nullptr);
     std::tm time_parts{};
@@ -25,6 +24,8 @@ std::string utc_now()
     std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &time_parts);
     return buffer;
 }
+
+namespace {
 
 bool too_deep(const nlohmann::json& json, int depth)
 {
@@ -150,7 +151,7 @@ std::expected<void, SaveError> ProjectFile::Save(const std::filesystem::path& pa
 {
     try
     {
-        const std::string modified = utc_now();
+        const std::string modified = CurrentUtcTimestamp();
         const std::string created = project.created_utc.empty() ? modified : project.created_utc;
         nlohmann::json document = project_json(project, created, modified);
         document["checksum"] = payload_checksum(document);
