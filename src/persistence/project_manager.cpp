@@ -35,6 +35,7 @@ Project ProjectManager::capture(const ISimulation& simulation, const View3D& vie
 {
     Project project;
     project.scene = simulation.editor_scene();
+    project.scene.FlushDestroyed();
     project.gravity = gravity_;
     project.timestep = timestep_;
     project.duration = simulation.state().duration;
