@@ -1,5 +1,7 @@
 #include "editor/command.hpp"
 
+#include "ecs/object_ops.hpp"
+
 namespace openphysx {
 namespace {
 
@@ -31,7 +33,7 @@ void ApplySnapshot(ISimulation& simulation, const EditSnapshot& shot, bool full)
     }
 
     simulation.editor_scene() = shot.scene;
-    simulation.set_active(shot.active);
+    simulation.set_active(ResolveActive(simulation.editor_scene(), shot.active));
     if (want_play)
         simulation.play();
 }

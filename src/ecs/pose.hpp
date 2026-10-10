@@ -8,44 +8,26 @@
 
 namespace openphysx {
 
-inline RigidBody EntityPose(const Entity& entity)
+// Pose used for drawing and picking: the world transform, with the box scaled by the
+// world scale. The box size stays the box, and scale stays on the transform.
+inline RigidBody WorldBody(const Scene& scene, const Entity& entity)
 {
     RigidBody body;
     if (!entity)
         return body;
-    if (entity.Has<TransformComponent>())
-    {
-        const TransformComponent& transform = entity.Get<TransformComponent>();
-        body.position = transform.position;
-        body.rotation = transform.rotation;
-    }
+    const TransformComponent world = scene.GetWorldTransform(entity);
+    body.position = world.position;
+    body.rotation = world.rotation;
     if (entity.Has<PrimitiveBoxComponent>())
     {
         const PrimitiveBoxComponent& box = entity.Get<PrimitiveBoxComponent>();
-        body.size = box.size;
+        body.size = {box.size.x * world.scale.x, box.size.y * world.scale.y, box.size.z * world.scale.z};
         body.color = box.color;
     }
     return body;
 }
 
-inline void SetEntityPose(Entity entity, const RigidBody& body)
-{
-    if (!entity)
-        return;
-    if (entity.Has<TransformComponent>())
-    {
-        TransformComponent& transform = entity.Get<TransformComponent>();
-        transform.position = body.position;
-        transform.rotation = body.rotation;
-    }
-    if (entity.Has<PrimitiveBoxComponent>())
-    {
-        PrimitiveBoxComponent& box = entity.Get<PrimitiveBoxComponent>();
-        box.size = body.size;
-        box.color = body.color;
-    }
-}
-
+// The object's own flag. IsVisibleInWorld (object_ops.hpp) also checks the ancestors.
 inline bool EntityVisible(const Entity& entity)
 {
     return entity && (!entity.Has<EditorStateComponent>() || entity.Get<EditorStateComponent>().visible);

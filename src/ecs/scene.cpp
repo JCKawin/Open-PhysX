@@ -2,9 +2,13 @@
 
 #include "core/Math.h"
 #include "ecs/component_registry.hpp"
+#include "ecs/components/render.hpp"
+#include "ecs/components/slots.hpp"
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdio>
 
 namespace openphysx {
 namespace {
@@ -75,6 +79,7 @@ Scene::Scene(Scene&& other) noexcept
     , destroy_queue_(std::move(other.destroy_queue_))
     , pending_(std::move(other.pending_))
     , unknown_(std::move(other.unknown_))
+    , version_(other.version_)
 {
     Rebind();
 }
@@ -89,6 +94,7 @@ Scene& Scene::operator=(Scene&& other) noexcept
     destroy_queue_ = std::move(other.destroy_queue_);
     pending_ = std::move(other.pending_);
     unknown_ = std::move(other.unknown_);
+    version_ = other.version_;
     Rebind();
     return *this;
 }
@@ -123,7 +129,7 @@ void Scene::OnIdDestroy(entt::registry& registry, entt::entity entity)
 
 Entity Scene::CreateEntity(std::string_view name)
 {
-    return CreateEntityWithUUID(GenerateUuid(), name);
+    return CreateEntityWithUUID(GenerateUuid(), UniqueName(name));
 }
 
 Entity Scene::CreateEntityWithUUID(UUID id, std::string_view name)
@@ -137,6 +143,11 @@ Entity Scene::CreateEntityWithUUID(UUID id, std::string_view name)
     registry_.emplace<TransformComponent>(created);
     registry_.emplace<RelationshipComponent>(created);
     registry_.emplace<EditorStateComponent>(created);
+    // Empty slots (epic A3). Every object has them. Nothing evaluates them yet.
+    registry_.emplace<MeshRendererComponent>(created);
+    registry_.emplace<ConstraintStackComponent>(created);
+    registry_.emplace<ModifierStackComponent>(created);
+    registry_.emplace<FluidRoleComponent>(created);
     return Entity{created, this};
 }
 
@@ -195,6 +206,57 @@ Entity Scene::FindByName(std::string_view name) const
             return entity;
     }
     return {};
+}
+
+bool Scene::NameTaken(std::string_view name, UUID ignore) const
+{
+    for (const UUID id : creation_order_)
+    {
+        if (id == ignore)
+            continue;
+        const Entity entity = FindByUUID(id);
+        if (entity && entity.Has<TagComponent>() && entity.Get<TagComponent>().name == name)
+            return true;
+    }
+    return false;
+}
+
+std::string Scene::UniqueName(std::string_view requested, UUID ignore) const
+{
+    const std::string base = requested.empty() ? std::string("Entity") : std::string(requested);
+    if (!NameTaken(base, ignore))
+        return base;
+
+    // Blender's rule: a trailing ".NNN" is the counter, so the search continues after it.
+    // Any other name gets ".001" first.
+    std::string stem = base;
+    int next = 1;
+    const std::size_t dot = base.rfind('.');
+    if (dot != std::string::npos && dot + 1 < base.size() && base.size() - dot - 1 <= 6 &&
+        std::all_of(base.begin() + static_cast<std::ptrdiff_t>(dot + 1), base.end(), [](char c) { return c >= '0' && c <= '9'; }))
+    {
+        stem = base.substr(0, dot);
+        next = std::stoi(base.substr(dot + 1)) + 1;
+    }
+
+    for (int n = next; n < 1000000; ++n)
+    {
+        char digits[16] = {};
+        std::snprintf(digits, sizeof(digits), "%03d", n);
+        std::string candidate = stem + "." + digits;
+        if (!NameTaken(candidate, ignore))
+            return candidate;
+    }
+    return base;
+}
+
+std::string Scene::SetName(Entity entity, std::string_view requested)
+{
+    if (!entity || !entity.Has<TagComponent>())
+        return {};
+    std::string name = UniqueName(requested, entity.GetUUID());
+    entity.Get<TagComponent>().name = name;
+    return name;
 }
 
 void Scene::Detach(Entity entity)
@@ -336,6 +398,7 @@ bool Scene::SetParent(Entity child, Entity parent, bool keep_world_transform)
 
 void Scene::CopyEntitiesFrom(const Scene& other)
 {
+    version_ = other.version_;
     for (const UUID id : other.creation_order_)
     {
         const Entity source = other.FindByUUID(id);

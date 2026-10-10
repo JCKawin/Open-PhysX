@@ -7,12 +7,18 @@
 
 #include <entt/entt.hpp>
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace openphysx {
+
+// Layout version of the scene. Bump it when a slot changes shape in a way older builds
+// cannot read. A file with a newer version is refused, never silently rewritten.
+inline constexpr std::uint32_t kSceneVersion = 1;
 
 struct SceneBackref
 {
@@ -38,6 +44,12 @@ public:
     Entity FindByUUID(UUID id) const;
     Entity FindByName(std::string_view name) const;
 
+    // A name no other entity in this scene uses: "Cube", "Cube.001", "Cube.002", ...
+    // `ignore` is the entity being renamed, so it does not clash with itself.
+    std::string UniqueName(std::string_view requested, UUID ignore = kNullUuid) const;
+    // Renames the entity to UniqueName(requested) and returns the name it received.
+    std::string SetName(Entity entity, std::string_view requested);
+
     template<typename... Components>
     auto View()
     {
@@ -57,8 +69,11 @@ public:
     // Destroying a parent destroys its children on the next flush.
     bool SetParent(Entity child, Entity parent, bool keep_world_transform);
     TransformComponent GetWorldTransform(Entity entity) const;
+    // Stores a world transform as the local transform, relative to the parent.
+    void SetWorldTransform(Entity entity, const TransformComponent& world) { ApplyWorld(entity, world); }
 
     const std::vector<UUID>& CreationOrder() const { return creation_order_; }
+    std::uint32_t Version() const { return version_; }
 
     // Components from a file that this build does not know. They are written back unchanged.
     struct UnknownComponent
@@ -80,6 +95,7 @@ private:
     void Detach(Entity entity);
     bool IsUnder(Entity ancestor, Entity node) const;
     void ApplyWorld(Entity entity, const TransformComponent& world);
+    bool NameTaken(std::string_view name, UUID ignore) const;
     void Rebind();
 
     entt::registry registry_;
@@ -88,6 +104,7 @@ private:
     std::vector<UUID> destroy_queue_;
     std::unordered_set<UUID> pending_;
     std::unordered_map<UUID, std::vector<UnknownComponent>> unknown_;
+    std::uint32_t version_ = kSceneVersion;
 };
 
 inline bool operator==(const Scene::UnknownComponent& a, const Scene::UnknownComponent& b)
@@ -97,10 +114,17 @@ inline bool operator==(const Scene::UnknownComponent& a, const Scene::UnknownCom
 
 bool operator==(const Scene& a, const Scene& b);
 
+// Adding a component the entity already has replaces its value. EnTT leaves
+// emplacing over an existing component undefined, so it is never called here.
 template<typename T, typename... Args>
 T& Entity::Add(Args&&... args)
 {
-    // EnTT's emplace returns void for empty tags, so the reference always comes from get.
+    if (Has<T>())
+    {
+        T& current = scene_->Registry().get<T>(id_);
+        current = T(std::forward<Args>(args)...);
+        return current;
+    }
     scene_->Registry().emplace<T>(id_, std::forward<Args>(args)...);
     return scene_->Registry().get<T>(id_);
 }

@@ -36,8 +36,10 @@ public:
     virtual void set_active(UUID id) = 0;
     virtual Entity active_entity() const = 0;
 
-    // Draw pose of the active entity. Demo motion offsets this copy only.
+    // Draw pose of the active object. Demo motion offsets this copy only.
     virtual RigidBody visual_body() const = 0;
+    // Draw pose of any object in world space. Demo motion offsets the active object only.
+    virtual RigidBody visual_body_of(UUID id) const = 0;
 };
 
 } // namespace openphysx

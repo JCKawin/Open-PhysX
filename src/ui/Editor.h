@@ -5,6 +5,7 @@
 #include "ecs/scene.hpp"
 
 #include <string>
+#include <vector>
 
 namespace openphysx {
 
@@ -41,6 +42,7 @@ struct ViewportSample
 };
 
 // Keymap, modal operators, and the editor command stack. UI code only.
+// Selection changes are not commands. Edits to the scene, visibility, and names are.
 class Editor
 {
 public:
@@ -58,6 +60,11 @@ public:
     bool can_redo() const { return commands_.CanRedo(); }
     CommandStack& commands() { return commands_; }
     const CommandStack& commands() const { return commands_; }
+
+    // Outliner actions. A click selects. Shift-click adds or removes from the selection.
+    void outliner_click(ISimulation& simulation, UUID id, bool additive);
+    void set_visible(ISimulation& simulation, UUID id, bool visible);
+    void rename_object(ISimulation& simulation, UUID id, const std::string& name);
 
     Tool tool = Tool::Select;
     MousePreset mouse = MousePreset::OpenPhysX;
@@ -85,12 +92,28 @@ private:
         Scale,
     };
 
+    enum class Clear
+    {
+        Location,
+        Rotation,
+        Scale,
+    };
+
+    // One selected object the transform moves. Objects under a selected parent follow it.
+    struct Root
+    {
+        UUID id = kNullUuid;
+        TransformComponent local{};
+        TransformComponent world{};
+    };
+
     void cancel_modal(ISimulation& simulation);
     void confirm_transform(ISimulation& simulation);
     void begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample);
     void apply_transform(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
     void finish_box(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
-    void click_select(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
+    void pick_at_cursor(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
+    void clear_selected(ISimulation& simulation, Clear what);
     void try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
 
     EditSnapshot frame_{};
@@ -102,7 +125,12 @@ private:
     bool box_dragging_ = false;
     int axis_ = -1;
     bool local_axis_ = false;
-    RigidBody body_before_{};
+    std::vector<Root> roots_;
+    Vec3 pivot_{};
+    Quat axis_frame_{};
+    // A duplicate starts a move. Undo treats the copy and the move as one step.
+    bool has_base_ = false;
+    EditSnapshot base_{};
     float press_x_ = 0.0f;
     float press_y_ = 0.0f;
     float cursor_x_ = 0.0f;

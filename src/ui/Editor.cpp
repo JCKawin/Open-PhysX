@@ -1,6 +1,9 @@
 #include "ui/Editor.h"
 
+#include "ecs/object_ops.hpp"
+#include "ecs/pick.hpp"
 #include "ecs/pose.hpp"
+#include "ecs/transform_ops.hpp"
 #include "logic/ISimulation.h"
 #include "renderer/IRenderer.h"
 
@@ -18,6 +21,7 @@ constexpr int kModShift = 1;
 constexpr int kModCtrl = 2;
 constexpr int kModAlt = 4;
 constexpr float kOrbitStep = 15.0f * kPi / 180.0f;
+constexpr float kMinScale = 0.05f;
 
 struct Mods
 {
@@ -45,9 +49,12 @@ enum class ViewAction
     Rotate,
     Scale,
     SelectAll,
+    DeselectAll,
     Hide,
     Show,
     Delete,
+    Duplicate,
+    Add,
     ClearLocation,
     ClearRotation,
     ClearScale,
@@ -85,6 +92,8 @@ constexpr AppBind kAppBinds[] = {
     {KEY_Z, kModCtrl, AppAction::Undo},
 };
 
+// Keys are the contract for the object actions: A and Alt+A select, Shift+A adds, Shift+D
+// duplicates, X and Delete remove, H hides, Alt+H shows every hidden object.
 constexpr KeyBind kViewBinds[] = {
     {KEY_HOME, 0, ViewAction::FrameAll, 0},
     {KEY_KP_DECIMAL, 0, ViewAction::FrameSelection, 0},
@@ -106,6 +115,9 @@ constexpr KeyBind kViewBinds[] = {
     {KEY_R, 0, ViewAction::Rotate, 0},
     {KEY_S, 0, ViewAction::Scale, 0},
     {KEY_A, 0, ViewAction::SelectAll, 0},
+    {KEY_A, kModAlt, ViewAction::DeselectAll, 0},
+    {KEY_A, kModShift, ViewAction::Add, 0},
+    {KEY_D, kModShift, ViewAction::Duplicate, 0},
     {KEY_B, 0, ViewAction::Box, 0},
     {KEY_H, kModAlt, ViewAction::Show, 0},
     {KEY_H, 0, ViewAction::Hide, 0},
@@ -158,54 +170,7 @@ bool same_edit(const EditSnapshot& a, const EditSnapshot& b)
     return left == right && a.scene == b.scene && a.active == b.active;
 }
 
-float body_radius(const RigidBody& body)
-{
-    return 0.5f * std::sqrt(body.size.x * body.size.x + body.size.y * body.size.y + body.size.z * body.size.z);
-}
-
-bool body_screen_rect(
-    const RigidBody& body, const View3D& view, const ViewportSample& sample, float& min_x, float& min_y, float& max_x, float& max_y)
-{
-    const Vec3 half = vec_scale(body.size, 0.5f);
-    bool any = false;
-    min_x = min_y = 1.0e9f;
-    max_x = max_y = -1.0e9f;
-
-    for (int i = 0; i < 8; ++i)
-    {
-        const Vec3 corner{
-            (i & 1) ? half.x : -half.x,
-            (i & 2) ? half.y : -half.y,
-            (i & 4) ? half.z : -half.z,
-        };
-        const Vec3 world = vec_add(body.position, quat_rotate(body.rotation, corner));
-        float ndc_x = 0.0f;
-        float ndc_y = 0.0f;
-        if (!view_project(view, world, sample.aspect, ndc_x, ndc_y))
-            continue;
-
-        const float x = (ndc_x * 0.5f + 0.5f) * sample.width;
-        const float y = (1.0f - (ndc_y * 0.5f + 0.5f)) * sample.height;
-        min_x = std::min(min_x, x);
-        min_y = std::min(min_y, y);
-        max_x = std::max(max_x, x);
-        max_y = std::max(max_y, y);
-        any = true;
-    }
-    return any;
-}
-
-bool point_in_rect(float x, float y, float min_x, float min_y, float max_x, float max_y)
-{
-    return x >= min_x && x <= max_x && y >= min_y && y <= max_y;
-}
-
-bool ranges_overlap(float a0, float a1, float b0, float b1)
-{
-    return std::min(a0, a1) <= std::max(b0, b1) && std::max(a0, a1) >= std::min(b0, b1);
-}
-
-Vec3 axis_direction(int axis, bool local, const RigidBody& body)
+Vec3 axis_direction(int axis, bool local, Quat frame)
 {
     Vec3 direction{0.0f, 0.0f, 0.0f};
     if (axis == 0)
@@ -215,7 +180,7 @@ Vec3 axis_direction(int axis, bool local, const RigidBody& body)
     else
         direction = {0.0f, 0.0f, 1.0f};
     if (local)
-        direction = quat_rotate(body.rotation, direction);
+        direction = quat_rotate(frame, direction);
     return vec_normalize(direction);
 }
 
@@ -279,6 +244,38 @@ bool parse_numeric(const std::string& numeric, float& value)
     return end != numeric.c_str() && end != nullptr && *end == '\0';
 }
 
+// Frames the given objects. The sphere holds every object's box, so the view fits them all.
+void frame_objects(ISimulation& simulation, IRenderer& renderer, const std::vector<UUID>& ids, float margin, float aspect)
+{
+    if (ids.empty())
+        return;
+
+    std::vector<RigidBody> bodies;
+    Vec3 center{};
+    for (const UUID id : ids)
+    {
+        bodies.push_back(simulation.visual_body_of(id));
+        center = vec_add(center, bodies.back().position);
+    }
+    center = vec_scale(center, 1.0f / static_cast<float>(bodies.size()));
+
+    float radius = 0.0f;
+    for (const RigidBody& body : bodies)
+        radius = std::max(radius, vec_length(vec_sub(body.position, center)) + BodyRadius(body));
+    renderer.frame_bounds(center, radius * margin, aspect, true);
+}
+
+std::vector<UUID> selected_drawable(const Scene& scene)
+{
+    std::vector<UUID> ids;
+    for (const UUID id : DrawableObjects(scene))
+    {
+        if (EntitySelected(scene.FindByUUID(id)))
+            ids.push_back(id);
+    }
+    return ids;
+}
+
 } // namespace
 
 void Editor::begin_frame(const ISimulation& simulation)
@@ -308,25 +305,50 @@ void Editor::commit_edit(ISimulation& simulation, const EditSnapshot& before, bo
 
 void Editor::cancel_modal(ISimulation& simulation)
 {
-    if (modal_ == Modal::Transform)
+    const bool transform = modal_ == Modal::Transform;
+    const bool had_base = transform && has_base_;
+    if (transform)
     {
-        SetEntityPose(simulation.active_entity(), body_before_);
+        for (const Root& root : roots_)
+        {
+            if (Entity entity = simulation.scene().FindByUUID(root.id))
+                entity.Get<TransformComponent>() = root.local;
+        }
     }
+
+    const EditSnapshot base = base_;
     modal_ = Modal::None;
     numeric_.clear();
     axis_ = -1;
     local_axis_ = false;
     box_dragging_ = false;
+    roots_.clear();
+    has_base_ = false;
+
+    if (had_base)
+        commit_edit(simulation, base, false);
 }
 
 void Editor::confirm_transform(ISimulation& simulation)
 {
-    EditSnapshot before = capture(simulation);
-    SetEntityPose(before.scene.FindByUUID(before.active), body_before_);
+    // The live scene holds the moved poses. The snapshot taken before the move holds the
+    // original local poses, so undo returns the objects exactly to where they were.
+    EditSnapshot before = has_base_ ? base_ : capture(simulation);
+    if (!has_base_)
+    {
+        for (const Root& root : roots_)
+        {
+            if (Entity entity = before.scene.FindByUUID(root.id))
+                entity.Get<TransformComponent>() = root.local;
+        }
+    }
+
     modal_ = Modal::None;
     numeric_.clear();
     axis_ = -1;
     local_axis_ = false;
+    roots_.clear();
+    has_base_ = false;
     commit_edit(simulation, before, false);
 }
 
@@ -387,16 +409,36 @@ void Editor::handle_app(ISimulation& simulation, bool text_input, bool item_focu
 
 void Editor::begin_transform(ISimulation& simulation, Xform xform, bool drag_confirm, const ViewportSample& sample)
 {
-    const Entity entity = simulation.active_entity();
-    if (!EntityVisible(entity))
+    const std::vector<UUID> ids = TransformRoots(simulation.scene());
+    if (ids.empty())
         return;
 
     cancel_modal(simulation);
+    Scene& scene = simulation.scene();
+    std::vector<TransformComponent> worlds;
+    for (const UUID id : ids)
+    {
+        const Entity entity = scene.FindByUUID(id);
+        Root root;
+        root.id = id;
+        root.local = entity.Get<TransformComponent>();
+        root.world = scene.GetWorldTransform(entity);
+        roots_.push_back(root);
+        worlds.push_back(root.world);
+    }
+    pivot_ = MeanPosition(worlds);
+
+    // Local axes follow the active object. With no active root, the first root sets them.
+    axis_frame_ = roots_.front().world.rotation;
+    for (const Root& root : roots_)
+    {
+        if (root.id == simulation.active_id())
+            axis_frame_ = root.world.rotation;
+    }
+
     modal_ = Modal::Transform;
     xform_ = xform;
     drag_confirm_ = drag_confirm;
-    body_before_ = EntityPose(entity);
-    SetEntitySelected(entity, true);
     press_x_ = sample.local_x;
     press_y_ = sample.local_y;
     axis_ = -1;
@@ -414,8 +456,9 @@ void Editor::begin_transform(ISimulation& simulation, Xform xform, bool drag_con
 void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
 {
     const View3D& view = renderer.view();
-    const bool precise = current_mods().shift;
-    const bool snap = current_mods().ctrl;
+    const Mods mods = current_mods();
+    const bool precise = mods.shift;
+    const bool snap = mods.ctrl;
     const float dx = (sample.local_x - press_x_) * (precise ? 0.1f : 1.0f);
     const float dy = (sample.local_y - press_y_) * (precise ? 0.1f : 1.0f);
     const Vec3 right = view_right(view);
@@ -424,14 +467,21 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
 
     float typed = 0.0f;
     const bool has_typed = parse_numeric(numeric_, typed);
-    RigidBody body = body_before_;
+    Scene& scene = simulation.scene();
+
+    // Every root gets the same edit in world space. Each one is computed from its own pose
+    // at the start of the modal, so a frame never accumulates onto the last frame.
+    auto write = [&](const Root& root, const TransformComponent& next) {
+        if (Entity entity = scene.FindByUUID(root.id))
+            scene.SetWorldTransform(entity, next);
+    };
 
     if (xform_ == Xform::Move)
     {
         Vec3 delta{};
         if (has_typed)
         {
-            delta = axis_ >= 0 ? vec_scale(axis_direction(axis_, local_axis_, body_before_), typed) : vec_scale(right, typed);
+            delta = axis_ >= 0 ? vec_scale(axis_direction(axis_, local_axis_, axis_frame_), typed) : vec_scale(right, typed);
         }
         else
         {
@@ -439,7 +489,7 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
             delta = vec_scale(delta, pixel_scale(view));
             if (axis_ >= 0)
             {
-                const Vec3 direction = axis_direction(axis_, local_axis_, body_before_);
+                const Vec3 direction = axis_direction(axis_, local_axis_, axis_frame_);
                 delta = vec_scale(direction, vec_dot(delta, direction));
             }
             if (snap)
@@ -447,7 +497,7 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
                 const float grid = std::max(simulation.state().grid_spacing, 0.001f);
                 if (axis_ >= 0)
                 {
-                    const Vec3 direction = axis_direction(axis_, local_axis_, body_before_);
+                    const Vec3 direction = axis_direction(axis_, local_axis_, axis_frame_);
                     const float along = std::round(vec_dot(delta, direction) / grid) * grid;
                     delta = vec_scale(direction, along);
                 }
@@ -459,7 +509,8 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
                 }
             }
         }
-        body.position = vec_add(body_before_.position, delta);
+        for (const Root& root : roots_)
+            write(root, MoveWorld(root.world, delta));
     }
     else if (xform_ == Xform::Rotate)
     {
@@ -468,8 +519,7 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
         {
             float ndc_x = 0.0f;
             float ndc_y = 0.0f;
-            const Vec3 pivot = simulation.visual_body().position;
-            if (view_project(view, pivot, sample.aspect, ndc_x, ndc_y))
+            if (view_project(view, pivot_, sample.aspect, ndc_x, ndc_y))
             {
                 const float cx = (ndc_x * 0.5f + 0.5f) * sample.width;
                 const float cy = (1.0f - (ndc_y * 0.5f + 0.5f)) * sample.height;
@@ -485,8 +535,10 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
             angle = deg_to_rad(typed);
         }
 
-        const Vec3 direction = axis_ >= 0 ? axis_direction(axis_, local_axis_, body_before_) : forward;
-        body.rotation = quat_normalize(quat_mul(quat_axis_angle(direction, angle), body_before_.rotation));
+        const Vec3 direction = axis_ >= 0 ? axis_direction(axis_, local_axis_, axis_frame_) : forward;
+        const Quat rotation = quat_axis_angle(direction, angle);
+        for (const Root& root : roots_)
+            write(root, RotateWorld(root.world, pivot_, rotation));
     }
     else
     {
@@ -494,47 +546,73 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
         if (has_typed)
             factor = std::max(0.01f, typed);
 
-        auto scale_component = [&](float value) {
-            float scaled = std::max(0.05f, value * factor);
-            if (snap && !has_typed)
-                scaled = std::max(0.05f, std::round(scaled / 0.1f) * 0.1f);
-            return scaled;
-        };
-
-        if (axis_ < 0)
+        for (const Root& root : roots_)
         {
-            body.size.x = scale_component(body_before_.size.x);
-            body.size.y = scale_component(body_before_.size.y);
-            body.size.z = scale_component(body_before_.size.z);
-        }
-        else if (axis_ == 0)
-            body.size.x = scale_component(body_before_.size.x);
-        else if (axis_ == 1)
-            body.size.y = scale_component(body_before_.size.y);
-        else
-            body.size.z = scale_component(body_before_.size.z);
-    }
+            Vec3 per_axis{1.0f, 1.0f, 1.0f};
+            if (axis_ < 0)
+                per_axis = {factor, factor, factor};
+            else if (axis_ == 0)
+                per_axis.x = factor;
+            else if (axis_ == 1)
+                per_axis.y = factor;
+            else
+                per_axis.z = factor;
 
-    SetEntityPose(simulation.active_entity(), body);
+            TransformComponent next = ScaleWorld(root.world, pivot_, per_axis, kMinScale);
+            if (snap && !has_typed)
+            {
+                next.scale.x = std::max(kMinScale, std::round(next.scale.x / 0.1f) * 0.1f);
+                next.scale.y = std::max(kMinScale, std::round(next.scale.y / 0.1f) * 0.1f);
+                next.scale.z = std::max(kMinScale, std::round(next.scale.z / 0.1f) * 0.1f);
+            }
+            write(root, next);
+        }
+    }
 }
 
-void Editor::click_select(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
+void Editor::pick_at_cursor(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
 {
-    const Entity entity = simulation.active_entity();
-    if (!entity)
-        return;
-    if (!EntityVisible(entity))
+    Scene& scene = simulation.scene();
+    UUID hit = kNullUuid;
+    float nearest = 0.0f;
+    for (const UUID id : DrawableObjects(scene))
     {
-        SetEntitySelected(entity, false);
-        return;
+        ScreenBox box;
+        if (!ProjectBox(simulation.visual_body_of(id), renderer.view(), sample.width, sample.height, box) ||
+            !BoxContains(box, sample.local_x, sample.local_y))
+            continue;
+        if (hit == kNullUuid || box.depth < nearest)
+        {
+            hit = id;
+            nearest = box.depth;
+        }
     }
 
-    float min_x = 0.0f;
-    float min_y = 0.0f;
-    float max_x = 0.0f;
-    float max_y = 0.0f;
-    const bool projected = body_screen_rect(simulation.visual_body(), renderer.view(), sample, min_x, min_y, max_x, max_y);
-    SetEntitySelected(entity, projected && point_in_rect(sample.local_x, sample.local_y, min_x, min_y, max_x, max_y));
+    UUID active = simulation.active_id();
+    if (current_mods().shift)
+    {
+        if (hit != kNullUuid)
+        {
+            const bool now = !EntitySelected(scene.FindByUUID(hit));
+            SetSelected(scene, hit, now);
+            if (now)
+                active = hit;
+        }
+    }
+    else
+    {
+        DeselectAll(scene);
+        if (hit != kNullUuid)
+        {
+            SetSelected(scene, hit, true);
+            active = hit;
+        }
+        else
+        {
+            active = kNullUuid;
+        }
+    }
+    simulation.set_active(ResolveActive(scene, active));
 }
 
 void Editor::finish_box(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
@@ -544,31 +622,54 @@ void Editor::finish_box(ISimulation& simulation, IRenderer& renderer, const View
         ViewportSample click = sample;
         click.local_x = press_x_;
         click.local_y = press_y_;
-        click_select(simulation, renderer, click);
+        pick_at_cursor(simulation, renderer, click);
         modal_ = Modal::None;
         return;
     }
 
-    const Entity entity = simulation.active_entity();
-    float min_x = 0.0f;
-    float min_y = 0.0f;
-    float max_x = 0.0f;
-    float max_y = 0.0f;
-    const bool projected = EntityVisible(entity) &&
-                           body_screen_rect(simulation.visual_body(), renderer.view(), sample, min_x, min_y, max_x, max_y);
-    SetEntitySelected(
-        entity,
-        projected && ranges_overlap(press_x_, sample.local_x, min_x, max_x) &&
-            ranges_overlap(press_y_, sample.local_y, min_y, max_y));
+    Scene& scene = simulation.scene();
+    if (!current_mods().shift)
+        DeselectAll(scene);
+    for (const UUID id : DrawableObjects(scene))
+    {
+        ScreenBox box;
+        if (ProjectBox(simulation.visual_body_of(id), renderer.view(), sample.width, sample.height, box) &&
+            BoxOverlaps(box, press_x_, press_y_, sample.local_x, sample.local_y))
+            SetSelected(scene, id, true);
+    }
+    simulation.set_active(ResolveActive(scene, simulation.active_id()));
     modal_ = Modal::None;
     box_dragging_ = false;
+}
+
+void Editor::clear_selected(ISimulation& simulation, Clear what)
+{
+    const std::vector<UUID> ids = TransformRoots(simulation.scene());
+    if (ids.empty())
+        return;
+
+    const EditSnapshot before = capture(simulation);
+    Scene& scene = simulation.scene();
+    for (const UUID id : ids)
+    {
+        Entity entity = scene.FindByUUID(id);
+        TransformComponent world = scene.GetWorldTransform(entity);
+        if (what == Clear::Location)
+            world.position = {0.0f, 1.0f, 0.0f};
+        else if (what == Clear::Rotation)
+            world.rotation = {};
+        else
+            world.scale = {1.0f, 1.0f, 1.0f};
+        scene.SetWorldTransform(entity, world);
+    }
+    commit_edit(simulation, before, false);
 }
 
 void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
 {
     const Mods mods = current_mods();
     const MouseBind* mouse_binds = mouse == MousePreset::Blender ? kBlenderMouse : kOpenPhysXMouse;
-    const int mouse_count = mouse == MousePreset::Blender ? 3 : 3;
+    const int mouse_count = 3;
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
@@ -610,19 +711,15 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
         if (!IsKeyPressed(bind.key) || !mods_match(mods, bind.mods))
             continue;
 
+        Scene& scene = simulation.scene();
         switch (bind.action)
         {
         case ViewAction::FrameAll:
-        case ViewAction::FrameSelection:
-        {
-            const Entity entity = simulation.active_entity();
-            if (!entity)
-                break;
-            const RigidBody body = EntityPose(entity);
-            const float radius = body_radius(body) * (bind.action == ViewAction::FrameAll ? 1.45f : 1.15f);
-            renderer.frame_bounds(body.position, radius, sample.aspect, true);
+            frame_objects(simulation, renderer, DrawableObjects(scene), 1.45f, sample.aspect);
             break;
-        }
+        case ViewAction::FrameSelection:
+            frame_objects(simulation, renderer, selected_drawable(scene), 1.15f, sample.aspect);
+            break;
         case ViewAction::TogglePersp:
             renderer.toggle_projection();
             break;
@@ -649,48 +746,77 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
             begin_transform(simulation, Xform::Scale, false, sample);
             break;
         case ViewAction::SelectAll:
-            SetEntitySelected(simulation.active_entity(), true);
+            SelectAllVisible(scene);
+            simulation.set_active(ResolveActive(scene, simulation.active_id()));
+            break;
+        case ViewAction::DeselectAll:
+            DeselectAll(scene);
+            simulation.set_active(kNullUuid);
             break;
         case ViewAction::Hide:
-        case ViewAction::Delete:
-            if (Entity entity = simulation.active_entity(); EntityVisible(entity))
+            if (!SelectedObjects(scene).empty())
             {
                 const EditSnapshot before = capture(simulation);
-                entity.Get<EditorStateComponent>().visible = false;
+                HideSelected(scene);
                 commit_edit(simulation, before, false);
             }
             break;
         case ViewAction::Show:
-            if (Entity entity = simulation.active_entity(); entity && !EntityVisible(entity))
+        {
+            const EditSnapshot before = capture(simulation);
+            RevealHidden(scene);
+            simulation.set_active(ResolveActive(scene, simulation.active_id()));
+            commit_edit(simulation, before, false);
+            break;
+        }
+        case ViewAction::Delete:
+        {
+            const std::vector<UUID> doomed = SelectedObjects(scene);
+            if (doomed.empty())
+                break;
+            const EditSnapshot before = capture(simulation);
+            DeleteObjects(scene, doomed);
+            simulation.set_active(ResolveActive(scene, kNullUuid));
+            commit_edit(simulation, before, false);
+            break;
+        }
+        case ViewAction::Duplicate:
+        {
+            if (SelectedObjects(scene).empty())
+                break;
+            // The copy and the move that follows are one undo step, so the snapshot is taken
+            // before the copy is made.
+            const EditSnapshot before = capture(simulation);
+            const std::vector<UUID> copies = DuplicateObjects(scene, SelectedObjects(scene));
+            if (!copies.empty())
+                simulation.set_active(copies.front());
+            begin_transform(simulation, Xform::Move, false, sample);
+            if (modal_ == Modal::Transform)
             {
-                const EditSnapshot before = capture(simulation);
-                entity.Get<EditorStateComponent>().visible = true;
+                has_base_ = true;
+                base_ = before;
+            }
+            else
+            {
                 commit_edit(simulation, before, false);
             }
             break;
+        }
+        case ViewAction::Add:
+        {
+            const EditSnapshot before = capture(simulation);
+            simulation.set_active(AddBoxObject(scene));
+            commit_edit(simulation, before, false);
+            break;
+        }
         case ViewAction::ClearLocation:
-            if (Entity entity = simulation.active_entity(); entity && entity.Has<TransformComponent>())
-            {
-                const EditSnapshot before = capture(simulation);
-                entity.Get<TransformComponent>().position = {0.0f, 1.0f, 0.0f};
-                commit_edit(simulation, before, false);
-            }
+            clear_selected(simulation, Clear::Location);
             break;
         case ViewAction::ClearRotation:
-            if (Entity entity = simulation.active_entity(); entity && entity.Has<TransformComponent>())
-            {
-                const EditSnapshot before = capture(simulation);
-                entity.Get<TransformComponent>().rotation = {};
-                commit_edit(simulation, before, false);
-            }
+            clear_selected(simulation, Clear::Rotation);
             break;
         case ViewAction::ClearScale:
-            if (Entity entity = simulation.active_entity(); entity && entity.Has<PrimitiveBoxComponent>())
-            {
-                const EditSnapshot before = capture(simulation);
-                entity.Get<PrimitiveBoxComponent>().size = {2.0f, 2.0f, 2.0f};
-                commit_edit(simulation, before, false);
-            }
+            clear_selected(simulation, Clear::Scale);
             break;
         case ViewAction::Box:
             modal_ = Modal::Box;
@@ -826,6 +952,52 @@ void Editor::handle_viewport(
         cancel_modal(simulation);
 }
 
+void Editor::outliner_click(ISimulation& simulation, UUID id, bool additive)
+{
+    Scene& scene = simulation.scene();
+    Entity entity = scene.FindByUUID(id);
+    if (!entity)
+        return;
+
+    UUID active = simulation.active_id();
+    if (additive)
+    {
+        const bool now = !EntitySelected(entity);
+        SetEntitySelected(entity, now);
+        if (now)
+            active = id;
+    }
+    else
+    {
+        DeselectAll(scene);
+        SetEntitySelected(entity, true);
+        active = id;
+    }
+    simulation.set_active(ResolveActive(scene, active));
+}
+
+void Editor::set_visible(ISimulation& simulation, UUID id, bool visible)
+{
+    Entity entity = simulation.scene().FindByUUID(id);
+    if (!entity || !entity.Has<EditorStateComponent>() || entity.Get<EditorStateComponent>().visible == visible)
+        return;
+
+    const EditSnapshot before = capture(simulation);
+    entity.Get<EditorStateComponent>().visible = visible;
+    commit_edit(simulation, before, false);
+}
+
+void Editor::rename_object(ISimulation& simulation, UUID id, const std::string& name)
+{
+    Entity entity = simulation.scene().FindByUUID(id);
+    if (!entity || !entity.Has<TagComponent>() || name.empty())
+        return;
+
+    const EditSnapshot before = capture(simulation);
+    simulation.scene().SetName(entity, name);
+    commit_edit(simulation, before, false);
+}
+
 bool Editor::box_visible() const
 {
     return modal_ == Modal::Box && box_dragging_;
@@ -869,8 +1041,8 @@ void Editor::status_line(char* buffer, int size) const
 const char* Editor::nav_help() const
 {
     if (mouse == MousePreset::Blender)
-        return "MMB orbit   Shift+MMB pan   Wheel zoom   G R S transform   Numpad views";
-    return "RMB orbit   Shift+RMB pan   Wheel zoom   G R S transform   Numpad views";
+        return "MMB orbit   Shift+MMB pan   Wheel zoom   G R S transform   A all   Alt+A none   Shift+A add   Shift+D dup   X delete";
+    return "RMB orbit   Shift+RMB pan   Wheel zoom   G R S transform   A all   Alt+A none   Shift+A add   Shift+D dup   X delete";
 }
 
 } // namespace openphysx

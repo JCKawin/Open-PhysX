@@ -15,8 +15,6 @@
 namespace openphysx {
 namespace {
 
-extern "C" void glfwSetWindowShouldClose(void* window, int value);
-
 nfdfilteritem_t kProjectFilter[] = {{"OpenPhysX project", "opx"}};
 
 std::filesystem::path path_from_dialog(const nfdchar_t* text)
@@ -404,9 +402,10 @@ void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& re
     }
 }
 
+// raylib clears the GLFW close flag on every poll, so the close request is consumed here.
+// Passing GetWindowHandle() to GLFW is not valid: on Windows it returns the native HWND.
 void RequestFileQuit(FileSession& session, ISimulation& simulation, IRenderer& renderer, CommandStack& commands, bool& quit)
 {
-    glfwSetWindowShouldClose(GetWindowHandle(), 0);
     request(session, FilePending::Exit, simulation, renderer, commands, quit);
 }
 

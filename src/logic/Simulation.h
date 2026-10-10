@@ -33,6 +33,7 @@ public:
     Entity active_entity() const override { return scene().FindByUUID(active_); }
 
     RigidBody visual_body() const override;
+    RigidBody visual_body_of(UUID id) const override;
 
 private:
     void make_default_cube();

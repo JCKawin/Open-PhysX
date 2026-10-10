@@ -1,5 +1,6 @@
 #include "ui/Workspace.h"
 
+#include "ecs/object_ops.hpp"
 #include "ecs/pose.hpp"
 #include "persistence/recovery.hpp"
 #include "ui/file_menu.hpp"
@@ -13,7 +14,9 @@
 #include "raylib.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cstdio>
+#include <string>
 
 namespace openphysx {
 namespace {
@@ -22,6 +25,7 @@ constexpr const char* kViewportTitle = "Viewport";
 constexpr const char* kPropertiesTitle = "Properties";
 constexpr const char* kAnimationTitle = "Animation Player";
 constexpr const char* kToolsTitle = "Tools";
+constexpr const char* kOutlinerTitle = "Outliner";
 constexpr const char* kDockspaceWindow = "##WorkspaceHost";
 constexpr const char* kDockspaceId = "OpenPhysXDockSpace";
 
@@ -166,6 +170,7 @@ void Workspace::draw(ISimulation& simulation, IRenderer& renderer)
     draw_properties(simulation, renderer);
     draw_animation_player(simulation);
     draw_tools(simulation, renderer);
+    draw_outliner(simulation);
     DrawLoadReportPanel(files_);
 
     if (show_demo_)
@@ -204,11 +209,12 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
         ImGui::MenuItem("Properties", nullptr, &show_properties_);
         ImGui::MenuItem("Animation Player", nullptr, &show_animation_);
         ImGui::MenuItem("Tools", nullptr, &show_tools_);
+        ImGui::MenuItem("Outliner", nullptr, &show_outliner_);
         ImGui::MenuItem("Load Report", nullptr, &files_.load_report_open, !files_.load_report.entries.empty());
         ImGui::Separator();
         if (ImGui::MenuItem("Reset Layout"))
         {
-            show_viewport_ = show_properties_ = show_animation_ = show_tools_ = true;
+            show_viewport_ = show_properties_ = show_animation_ = show_tools_ = show_outliner_ = true;
             reset_layout_ = true;
         }
         ImGui::Separator();
@@ -327,12 +333,15 @@ void Workspace::apply_default_layout(ImGuiID dockspace_id)
     ImGuiID properties_id = 0;
     ImGuiID animation_id = 0;
     ImGuiID tools_id = 0;
+    ImGuiID outliner_id = 0;
 
     ImGui::DockBuilderSplitNode(viewport_id, ImGuiDir_Right, 0.28f, &properties_id, &viewport_id);
     ImGui::DockBuilderSplitNode(viewport_id, ImGuiDir_Down, 0.28f, &animation_id, &viewport_id);
+    ImGui::DockBuilderSplitNode(properties_id, ImGuiDir_Up, 0.30f, &outliner_id, &properties_id);
     ImGui::DockBuilderSplitNode(properties_id, ImGuiDir_Down, 0.40f, &tools_id, &properties_id);
 
     ImGui::DockBuilderDockWindow(kViewportTitle, viewport_id);
+    ImGui::DockBuilderDockWindow(kOutlinerTitle, outliner_id);
     ImGui::DockBuilderDockWindow(kPropertiesTitle, properties_id);
     ImGui::DockBuilderDockWindow(kAnimationTitle, animation_id);
     ImGui::DockBuilderDockWindow(kToolsTitle, tools_id);
@@ -470,7 +479,10 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
             arm_edit();
         }
         if (ImGui::Checkbox("Selected", &selected))
+        {
             SetEntitySelected(entity, selected);
+            simulation.set_active(ResolveActive(simulation.scene(), simulation.active_id()));
+        }
         if (transform != nullptr)
         {
             ImGui::DragFloat3("Position", &transform->position.x, 0.05f);
@@ -485,10 +497,12 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
                     {deg_to_rad(euler_cache_.x), deg_to_rad(euler_cache_.y), deg_to_rad(euler_cache_.z)});
             euler_active_ = ImGui::IsItemActive();
             arm_edit();
+            ImGui::DragFloat3("Scale", &transform->scale.x, 0.01f, 0.05f, 20.0f);
+            arm_edit();
         }
         if (box != nullptr)
         {
-            ImGui::DragFloat3("Size", &box->size.x, 0.05f, 0.05f, 20.0f);
+            ImGui::DragFloat3("Box Size", &box->size.x, 0.05f, 0.05f, 20.0f);
             arm_edit();
             ImGui::ColorEdit3("Color", box->color.data());
             arm_edit();
@@ -601,6 +615,105 @@ void Workspace::draw_animation_player(ISimulation& simulation)
     ImGui::SetNextItemWidth(120.0f);
     ImGui::DragFloat("Speed", &state.playback_speed, 0.05f, 0.1f, 4.0f, "%.2fx");
     arm_edit();
+
+    ImGui::End();
+}
+
+void Workspace::draw_outliner(ISimulation& simulation)
+{
+    if (!show_outliner_)
+        return;
+
+    // A saved layout that has no Outliner yet keeps the window floating on the right until
+    // Window > Reset Layout docks it. The size constraint keeps an old, small saved size readable.
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSizeConstraints(ImVec2(220.0f, 160.0f), ImVec2(FLT_MAX, FLT_MAX));
+    ImGui::SetNextWindowSize(ImVec2(260.0f, 300.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 300.0f, viewport->WorkPos.y + 60.0f), ImGuiCond_FirstUseEver);
+
+    if (!ImGui::Begin(kOutlinerTitle, &show_outliner_, ImGuiWindowFlags_NoCollapse))
+    {
+        ImGui::End();
+        return;
+    }
+
+    Scene& scene = simulation.scene();
+    const UUID active = simulation.active_id();
+    const ImVec4 text = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+    const ImVec4 dim = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+
+    if (scene.CreationOrder().empty())
+        ImGui::TextDisabled("No objects. Shift+A adds a cube.");
+
+    for (const UUID id : scene.CreationOrder())
+    {
+        const Entity entity = scene.FindByUUID(id);
+        if (!entity)
+            continue;
+
+        const UUID parent_id = entity.Has<RelationshipComponent>() ? entity.Get<RelationshipComponent>().parent : kNullUuid;
+        const Entity parent = parent_id != kNullUuid ? scene.FindByUUID(parent_id) : Entity{};
+        const std::string name = entity.Get<TagComponent>().name;
+        const bool visible = EntityVisible(entity);
+        const bool shown = IsVisibleInWorld(scene, entity);
+        const float indent = parent ? 16.0f : 0.0f;
+
+        ImGui::PushID(static_cast<int>(id & 0x7fffffffu));
+        if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH))
+            editor_.set_visible(simulation, id, !visible);
+        ImGui::SameLine();
+
+        ImGui::Indent(indent);
+        if (renaming_ == id)
+        {
+            if (rename_focus_)
+            {
+                ImGui::SetKeyboardFocusHere();
+                rename_focus_ = false;
+            }
+            ImGui::SetNextItemWidth(-1.0f);
+            const bool submitted = ImGui::InputText(
+                "##rename",
+                rename_buffer_,
+                sizeof(rename_buffer_),
+                ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                renaming_ = kNullUuid;
+            }
+            else if (submitted || ImGui::IsItemDeactivated())
+            {
+                editor_.rename_object(simulation, id, rename_buffer_);
+                renaming_ = kNullUuid;
+            }
+        }
+        else
+        {
+            std::string label = name;
+            if (parent)
+                label += "   (parent: " + parent.Get<TagComponent>().name + ")";
+
+            // Objects under a hidden parent are drawn dimmed, as they are hidden in the viewport.
+            ImGui::PushStyleColor(ImGuiCol_Text, id == active ? rgba(232, 158, 62) : (shown ? text : dim));
+            if (ImGui::Selectable(label.c_str(), EntitySelected(entity), ImGuiSelectableFlags_AllowDoubleClick))
+            {
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                {
+                    renaming_ = id;
+                    rename_focus_ = true;
+                    std::snprintf(rename_buffer_, sizeof(rename_buffer_), "%s", name.c_str());
+                }
+                else
+                {
+                    editor_.outliner_click(simulation, id, ImGui::GetIO().KeyShift);
+                }
+            }
+            ImGui::PopStyleColor();
+        }
+        ImGui::Unindent(indent);
+        ImGui::PopID();
+    }
 
     ImGui::End();
 }

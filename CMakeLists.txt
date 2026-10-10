@@ -137,6 +137,7 @@ set(OPENPHYSX_SOURCES
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
+    src/ecs/object_ops.cpp
     src/editor/command.cpp
     src/persistence/scene_serializer.cpp
     src/persistence/checksum.cpp
@@ -201,9 +202,12 @@ add_executable(Open_PhysX_tests
     tests/recovery.cpp
     tests/sidecar.cpp
     tests/validation.cpp
+    tests/object_ops.cpp
+    tests/transform_ops.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
+    src/ecs/object_ops.cpp
     src/editor/command.cpp
     src/persistence/scene_serializer.cpp
     src/persistence/checksum.cpp

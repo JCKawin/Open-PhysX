@@ -29,6 +29,7 @@ private:
     void draw_properties(ISimulation& simulation, IRenderer& renderer);
     void draw_animation_player(ISimulation& simulation);
     void draw_tools(ISimulation& simulation, IRenderer& renderer);
+    void draw_outliner(ISimulation& simulation);
 
     bool quit_requested_ = false;
     bool reset_layout_ = false;
@@ -36,6 +37,10 @@ private:
     bool show_properties_ = true;
     bool show_animation_ = true;
     bool show_tools_ = true;
+    bool show_outliner_ = true;
+    UUID renaming_ = kNullUuid;
+    bool rename_focus_ = false;
+    char rename_buffer_[128] = {};
     bool show_demo_ = false;
     bool show_metrics_ = false;
     bool vsync_ = true;

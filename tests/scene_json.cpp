@@ -2,6 +2,7 @@
 #include "ecs/components/physics.hpp"
 #include "ecs/components/render.hpp"
 #include "ecs/components/robot.hpp"
+#include "ecs/components/slots.hpp"
 #include "persistence/scene_serializer.hpp"
 
 #include <doctest/doctest.h>
@@ -82,6 +83,8 @@ Entity add_filled(Scene& scene, UUID id, std::string name)
     domain.turbulence = TurbulenceModel::None;
     domain.boundaries.push_back(BoundaryCondition{BoundaryKind::Outlet, {0.1f, 0.0f, 0.0f}, 0.1f});
     entity.Add<CfdDomainComponent>(domain);
+
+    entity.Get<FluidRoleComponent>().role = FluidRole::Flow;
     return entity;
 }
 
@@ -200,4 +203,41 @@ TEST_CASE("a scene without an entities array is refused and the previous scene s
     CHECK_FALSE(result.has_value());
     CHECK(result.error().kind == LoadError::Kind::Schema);
     CHECK(scene.FindByUUID(id));
+}
+
+TEST_CASE("the scene version is written, a newer version is refused, and an unversioned file opens")
+{
+    Scene scene;
+    scene.CreateEntity("Cube");
+    CHECK(WriteScene(scene).at("version") == 1);
+
+    LoadReport report;
+    const nlohmann::json newer = {{"version", 2}, {"entities", nlohmann::json::array()}};
+    const auto refused = ReadScene(newer, scene, report);
+    CHECK_FALSE(refused.has_value());
+    CHECK(refused.error().kind == LoadError::Kind::TooNew);
+    CHECK(scene.FindByName("Cube"));
+
+    const nlohmann::json unversioned = {{"entities", nlohmann::json::array()}};
+    CHECK(ReadScene(unversioned, scene, report).has_value());
+}
+
+TEST_CASE("empty slots survive a round trip with their values")
+{
+    Scene scene;
+    Entity cube = scene.CreateEntity("Cube");
+    cube.Get<FluidRoleComponent>().role = FluidRole::Effector;
+    cube.Get<MeshRendererComponent>().meshAsset = 0x77ull;
+
+    Scene loaded;
+    LoadReport report;
+    REQUIRE(ReadScene(WriteScene(scene), loaded, report));
+    CHECK(report.entries.empty());
+    const Entity again = loaded.FindByName("Cube");
+    REQUIRE(again);
+    CHECK(again.Get<FluidRoleComponent>().role == FluidRole::Effector);
+    CHECK(again.Get<MeshRendererComponent>().meshAsset == 0x77ull);
+    CHECK(again.Get<ConstraintStackComponent>().entries.empty());
+    CHECK(again.Get<ModifierStackComponent>().entries.empty());
+    CHECK(loaded == scene);
 }

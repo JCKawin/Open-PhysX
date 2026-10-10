@@ -7,6 +7,7 @@
 #include "ecs/components/render.hpp"
 #include "ecs/components/robot.hpp"
 #include "ecs/components/runtime.hpp"
+#include "ecs/components/slots.hpp"
 #include "ecs/uuid.hpp"
 
 #include <nlohmann/json.hpp>
@@ -625,6 +626,72 @@ inline void from_json(const nlohmann::json& j, CfdResultField& value)
         return;
     value.cells = j.value("cells", 0);
     value.time = j.value("time", 0.0f);
+}
+
+inline const std::pair<const char*, FluidRole> kFluidRoles[] = {
+    {"None", FluidRole::None},
+    {"Domain", FluidRole::Domain},
+    {"Flow", FluidRole::Flow},
+    {"Effector", FluidRole::Effector},
+};
+
+inline void to_json(nlohmann::json& j, const FluidRoleComponent& value)
+{
+    j = nlohmann::json{{"role", enum_to_string(value.role, kFluidRoles, 4)}};
+}
+
+inline void from_json(const nlohmann::json& j, FluidRoleComponent& value)
+{
+    value = {};
+    if (!j.is_object())
+        return;
+    value.role = enum_from_json(j, "role", FluidRole::None, kFluidRoles, 4);
+}
+
+inline void to_json(nlohmann::json& j, const ConstraintEntry&)
+{
+    j = nlohmann::json::object();
+}
+
+inline void from_json(const nlohmann::json&, ConstraintEntry& value)
+{
+    value = {};
+}
+
+inline void to_json(nlohmann::json& j, const ConstraintStackComponent& value)
+{
+    j = nlohmann::json{{"entries", value.entries}};
+}
+
+inline void from_json(const nlohmann::json& j, ConstraintStackComponent& value)
+{
+    value = {};
+    if (!j.is_object())
+        return;
+    value.entries = j.value("entries", value.entries);
+}
+
+inline void to_json(nlohmann::json& j, const ModifierEntry&)
+{
+    j = nlohmann::json::object();
+}
+
+inline void from_json(const nlohmann::json&, ModifierEntry& value)
+{
+    value = {};
+}
+
+inline void to_json(nlohmann::json& j, const ModifierStackComponent& value)
+{
+    j = nlohmann::json{{"entries", value.entries}};
+}
+
+inline void from_json(const nlohmann::json& j, ModifierStackComponent& value)
+{
+    value = {};
+    if (!j.is_object())
+        return;
+    value.entries = j.value("entries", value.entries);
 }
 
 } // namespace openphysx

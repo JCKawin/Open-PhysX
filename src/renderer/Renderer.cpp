@@ -1,5 +1,6 @@
 #include "renderer/Renderer.h"
 
+#include "ecs/object_ops.hpp"
 #include "ecs/pose.hpp"
 #include "logic/ISimulation.h"
 
@@ -225,8 +226,6 @@ void Renderer::render(const ISimulation& simulation)
 
     const SimulationState& state = simulation.state();
     const Scene& scene = simulation.scene();
-    const UUID active = simulation.active_id();
-    const RigidBody active_body = simulation.visual_body();
 
     rlSetClipPlanes(view_.clip_near, view_.clip_far);
     sync_camera();
@@ -238,16 +237,8 @@ void Renderer::render(const ISimulation& simulation)
     if (state.show_grid)
         DrawGrid(state.grid_slices, state.grid_spacing);
 
-    for (const UUID id : scene.CreationOrder())
-    {
-        const Entity entity = scene.FindByUUID(id);
-        if (!entity || !entity.Has<PrimitiveBoxComponent>() || !EntityVisible(entity))
-            continue;
-
-        const bool is_active = entity.Has<IDComponent>() && entity.Get<IDComponent>().id == active;
-        const RigidBody body = is_active ? active_body : EntityPose(entity);
-        draw_body(body, EntitySelected(entity));
-    }
+    for (const UUID id : DrawableObjects(scene))
+        draw_body(simulation.visual_body_of(id), EntitySelected(scene.FindByUUID(id)));
 
     EndMode3D();
     EndTextureMode();

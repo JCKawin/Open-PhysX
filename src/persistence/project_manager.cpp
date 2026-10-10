@@ -1,5 +1,6 @@
 #include "persistence/project_manager.hpp"
 
+#include "ecs/object_ops.hpp"
 #include "ecs/pose.hpp"
 
 #include <algorithm>
@@ -83,20 +84,14 @@ void ProjectManager::apply(ISimulation& simulation, Project project, CommandStac
     for (const UUID id : simulation.editor_scene().CreationOrder())
     {
         Entity entity = simulation.editor_scene().FindByUUID(id);
-        if (!entity)
-            continue;
-        if (listed(selection, id))
-            SetEntitySelected(entity, true);
-        else if (entity.Has<SelectionOutlineTag>())
-            entity.Remove<SelectionOutlineTag>();
+        if (entity)
+            SetEntitySelected(entity, listed(selection, id));
     }
 
-    UUID active = selection.empty() ? kNullUuid : selection.front();
-    if (active == kNullUuid || !simulation.editor_scene().FindByUUID(active))
-        active = simulation.editor_scene().CreationOrder().empty() ? kNullUuid : simulation.editor_scene().CreationOrder().front();
-    simulation.set_active(active);
-    if (Entity active_entity = simulation.editor_scene().FindByUUID(active))
-        SetEntitySelected(active_entity, true);
+    // The first saved selection is the active object. A file with no selection opens with
+    // nothing selected, so the active object is kNullUuid.
+    const UUID active = selection.empty() ? kNullUuid : selection.front();
+    simulation.set_active(ResolveActive(simulation.editor_scene(), active));
 
     gravity_ = project.gravity;
     timestep_ = project.timestep;

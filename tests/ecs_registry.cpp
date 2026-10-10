@@ -168,7 +168,7 @@ TEST_CASE("registry serializes every saved component and ignores unknown fields"
         CHECK(report.entries.empty());
         CHECK(info.serialize(entity) == info.serialize(destination));
     }
-    CHECK(saved == 17);
+    CHECK(saved == 20);
     CHECK(runtime == 5);
 
     TagComponent tag;

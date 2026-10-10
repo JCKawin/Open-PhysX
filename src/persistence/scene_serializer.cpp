@@ -148,6 +148,25 @@ void resolve_references(Scene& scene, LoadReport& report)
     }
 }
 
+// Object names are unique within a scene. A file with a repeated name gets the next free
+// suffix, so every object can still be found by name.
+void repair_names(Scene& scene, LoadReport& report)
+{
+    std::unordered_set<std::string> accepted;
+    for (const UUID id : scene.CreationOrder())
+    {
+        Entity entity = scene.FindByUUID(id);
+        if (!entity || !entity.Has<TagComponent>())
+            continue;
+        const std::string name = entity.Get<TagComponent>().name;
+        if (accepted.insert(name).second)
+            continue;
+        const std::string fixed = scene.SetName(entity, name);
+        report.warning("Duplicate object name \"" + name + "\" was renamed to \"" + fixed + "\".");
+        accepted.insert(fixed);
+    }
+}
+
 bool finite(float value)
 {
     return std::isfinite(value);
@@ -161,11 +180,6 @@ bool finite(const Vec3& value)
 bool finite(const Quat& value)
 {
     return finite(value.x) && finite(value.y) && finite(value.z) && finite(value.w);
-}
-
-bool finite(const Rgb& value)
-{
-    return finite(value.r) && finite(value.g) && finite(value.b);
 }
 
 bool usable_quat(const Quat& value)
@@ -184,20 +198,39 @@ void check_finite(float& value, float fallback, const std::string& name, const c
     report.warning(name + " " + field + " was not finite and was reset.");
 }
 
+float& axis_of(Vec3& value, int axis)
+{
+    return axis == 0 ? value.x : (axis == 1 ? value.y : value.z);
+}
+
+const float& axis_of(const Vec3& value, int axis)
+{
+    return axis == 0 ? value.x : (axis == 1 ? value.y : value.z);
+}
+
+// Only the bad components are replaced. The finite ones keep the value the file gave.
 void check_finite(Vec3& value, const Vec3& fallback, const std::string& name, const char* field, LoadReport& report)
 {
-    if (finite(value))
-        return;
-    value = fallback;
-    report.warning(name + " " + field + " was not finite and was reset.");
+    bool bad = false;
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        if (std::isfinite(axis_of(value, axis)))
+            continue;
+        axis_of(value, axis) = axis_of(fallback, axis);
+        bad = true;
+    }
+    if (bad)
+        report.warning(name + " " + field + " was not finite and was reset.");
 }
 
 void check_finite(Rgb& value, const Rgb& fallback, const std::string& name, const char* field, LoadReport& report)
 {
-    if (finite(value))
-        return;
-    value = fallback;
-    report.warning(name + " " + field + " was not finite and was reset.");
+    bool bad = false;
+    if (!std::isfinite(value.r)) { value.r = fallback.r; bad = true; }
+    if (!std::isfinite(value.g)) { value.g = fallback.g; bad = true; }
+    if (!std::isfinite(value.b)) { value.b = fallback.b; bad = true; }
+    if (bad)
+        report.warning(name + " " + field + " was not finite and was reset.");
 }
 
 void check_quat(Quat& value, const std::string& name, const char* field, LoadReport& report)
@@ -213,10 +246,10 @@ void check_size(Vec3& value, const Vec3& fallback, const std::string& name, cons
     bool bad = false;
     for (int axis = 0; axis < 3; ++axis)
     {
-        float& component = (&value.x)[axis];
+        float& component = axis_of(value, axis);
         if (finite(component) && component > 0.0f)
             continue;
-        component = (&fallback.x)[axis];
+        component = axis_of(fallback, axis);
         bad = true;
     }
     if (bad)
@@ -245,6 +278,7 @@ void check_axis(Vec3& value, const std::string& name, const char* field, LoadRep
 // mass from an exporter and must keep it so re-saving stays byte identical.
 void validate_scene(Scene& scene, LoadReport& report)
 {
+    repair_names(scene, report);
     for (const UUID id : scene.CreationOrder())
     {
         Entity entity = scene.FindByUUID(id);
@@ -392,7 +426,7 @@ nlohmann::json WriteScene(const Scene& scene)
         entities.push_back(nlohmann::json{{"id", UuidToHex(id)}, {"components", std::move(components)}});
     }
 
-    return nlohmann::json{{"entities", std::move(entities)}};
+    return nlohmann::json{{"version", scene.Version()}, {"entities", std::move(entities)}};
 }
 
 std::expected<void, LoadError> ReadScene(const nlohmann::json& json, Scene& scene, LoadReport& report)
@@ -408,6 +442,10 @@ std::expected<void, LoadError> ReadScene(const nlohmann::json& json, Scene& scen
 
     try
     {
+        if (json.value("version", std::uint32_t{1}) > kSceneVersion)
+            return std::unexpected(
+                LoadError{LoadError::Kind::TooNew, "This scene was created by a newer version of OpenPhysX."});
+
         for (const nlohmann::json& item : json.at("entities"))
         {
             if (!item.is_object() || !item.contains("id") || !item.at("id").is_string())

@@ -178,6 +178,20 @@ std::expected<void, SaveError> ProjectFile::Save(const std::filesystem::path& pa
 
 std::expected<LoadReport, LoadError> ProjectFile::Load(const std::filesystem::path& path, Project& out)
 {
+    // A field with the wrong JSON type makes nlohmann's value() throw. Nothing reaches
+    // `out` before the end of LoadChecked, so a throw leaves the caller's project alone.
+    try
+    {
+        return LoadChecked(path, out);
+    }
+    catch (const nlohmann::json::exception&)
+    {
+        return std::unexpected(LoadError{LoadError::Kind::Corrupt, "This file may be corrupt. A value has the wrong type."});
+    }
+}
+
+std::expected<LoadReport, LoadError> ProjectFile::LoadChecked(const std::filesystem::path& path, Project& out)
+{
     const auto text = read_text(path);
     if (!text)
         return std::unexpected(text.error());

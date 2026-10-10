@@ -61,6 +61,9 @@ void EnsureComponentsRegistered()
     registry.Register<ActuatorComponent>("Actuator", 1, saved);
     registry.Register<SensorComponent>("Sensor", 1, saved);
     registry.Register<CfdDomainComponent>("CfdDomain", 1, saved);
+    registry.Register<FluidRoleComponent>("FluidRole", 1, saved);
+    registry.Register<ConstraintStackComponent>("ConstraintStack", 1, saved);
+    registry.Register<ModifierStackComponent>("ModifierStack", 1, saved);
     registry.Register<SelectionOutlineTag>("SelectionOutline", 1, editor_only);
     registry.Register<MeshGpuHandle>("MeshGpuHandle", 1, runtime_only);
     registry.Register<PhysicsBodyHandle>("PhysicsBodyHandle", 1, runtime_only);

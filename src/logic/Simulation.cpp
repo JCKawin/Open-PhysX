@@ -1,5 +1,6 @@
 #include "logic/Simulation.h"
 
+#include "ecs/object_ops.hpp"
 #include "ecs/pose.hpp"
 
 #include <cmath>
@@ -13,11 +14,7 @@ Simulation::Simulation()
 
 void Simulation::make_default_cube()
 {
-    Entity cube = editor_.CreateEntity("Cube");
-    cube.Get<TransformComponent>().position = {0.0f, 1.0f, 0.0f};
-    cube.Add<PrimitiveBoxComponent>();
-    cube.Add<SelectionOutlineTag>();
-    active_ = cube.GetUUID();
+    active_ = AddBoxObject(editor_);
 }
 
 void Simulation::play()
@@ -84,12 +81,18 @@ void Simulation::step(float dt)
 
 RigidBody Simulation::visual_body() const
 {
-    const Entity entity = active_entity();
+    return visual_body_of(active_);
+}
+
+RigidBody Simulation::visual_body_of(UUID id) const
+{
+    const Scene& current = scene();
+    const Entity entity = current.FindByUUID(id);
     if (!entity)
         return {};
 
-    RigidBody body = EntityPose(entity);
-    if (state_.demo_motion)
+    RigidBody body = WorldBody(current, entity);
+    if (id == active_ && state_.demo_motion)
         body.position.y += std::sin(state_.time * 3.0f) * 0.25f;
     return body;
 }
