@@ -8,3 +8,5 @@ CMakeUserPresets.json
 imgui.ini
 *.user
 blender/
+OpenPhysX_Agent_Instructions.md
+Import-export/
