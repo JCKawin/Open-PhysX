@@ -666,6 +666,9 @@ void Workspace::draw_outliner(ISimulation& simulation)
     const ImVec4 text = ImGui::GetStyleColorVec4(ImGuiCol_Text);
     const ImVec4 dim = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 
+    // Fixed width so EYE and EYE_SLASH buttons are the same size and the labels line up.
+    const float eye_button_width = ImGui::GetFrameHeight() * 1.4f;
+
     if (scene.CreationOrder().empty())
         ImGui::TextDisabled("No objects. Shift+A adds a cube.");
 
@@ -683,11 +686,14 @@ void Workspace::draw_outliner(ISimulation& simulation)
         const float indent = parent ? 16.0f : 0.0f;
 
         ImGui::PushID(static_cast<int>(id & 0x7fffffffu));
-        if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH))
+        if (ImGui::Button(visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH, ImVec2(eye_button_width, 0.0f)))
             editor_.set_visible(simulation, id, !visible);
         ImGui::SameLine();
 
-        ImGui::Indent(indent);
+        // Indent only the label (not the eye column). Indent() would reset the cursor X back
+        // over the button, so shift the cursor manually instead.
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + indent);
+
         if (renaming_ == id)
         {
             if (rename_focus_)
@@ -734,7 +740,6 @@ void Workspace::draw_outliner(ISimulation& simulation)
             }
             ImGui::PopStyleColor();
         }
-        ImGui::Unindent(indent);
         ImGui::PopID();
     }
 
