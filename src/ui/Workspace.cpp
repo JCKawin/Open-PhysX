@@ -203,6 +203,29 @@ void Workspace::draw_menu_bar(ISimulation& simulation, IRenderer& renderer)
         ImGui::EndMenu();
     }
 
+    if (ImGui::BeginMenu("Object"))
+    {
+        if (ImGui::MenuItem("Add Box", "Shift+A"))
+        {
+            Scene& scene = simulation.scene();
+            const EditSnapshot before = editor_.frame_snapshot();
+            simulation.set_active(AddBoxObject(scene));
+            editor_.commit_edit(simulation, before, false);
+        }
+        Entity active_entity = simulation.active_entity();
+        const bool can_cube = active_entity && active_entity.Has<PrimitiveBoxComponent>();
+        if (ImGui::MenuItem("Assign Mesh Cube", nullptr, false, can_cube))
+        {
+            const EditSnapshot before = editor_.frame_snapshot();
+            Scene& scene = simulation.scene();
+            auto& box = active_entity.Get<PrimitiveBoxComponent>();
+            const uint32_t mesh_id = scene.add_mesh(make_cube(box.size));
+            box.mesh_id = mesh_id;
+            editor_.commit_edit(simulation, before, false);
+        }
+        ImGui::EndMenu();
+    }
+
     if (ImGui::BeginMenu("Window"))
     {
         ImGui::MenuItem("Viewport", nullptr, &show_viewport_);

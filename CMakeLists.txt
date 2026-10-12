@@ -131,6 +131,19 @@ FetchContent_MakeAvailable(nfd)
 # -----------------------------------------------------------------------------
 # Application
 # -----------------------------------------------------------------------------
+set(OPENPHYSX_IO_SOURCES
+    # B1 — Mesh component (core, no raylib)
+    src/core/Mesh.cpp
+    # B2 — Binary helpers (header-only: Binary.h)
+    # B3 — Import OBJ, STL, format detect
+    src/io/FormatDetect.cpp
+    src/io/Weld.cpp
+    src/io/ObjImport.cpp
+    src/io/StlImport.cpp
+    # B4 — OBJ export
+    src/io/ObjExport.cpp
+)
+
 set(OPENPHYSX_SOURCES
     src/main.cpp
     src/Application.cpp
@@ -151,11 +164,13 @@ set(OPENPHYSX_SOURCES
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp
     src/logic/Simulation.cpp
+    src/renderer/MeshCache.cpp
     src/renderer/Renderer.cpp
     src/ui/Workspace.cpp
     src/ui/Editor.cpp
     src/ui/file_menu.cpp
     src/ui/load_report_panel.cpp
+    ${OPENPHYSX_IO_SOURCES}
 )
 
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
@@ -204,6 +219,8 @@ add_executable(Open_PhysX_tests
     tests/validation.cpp
     tests/object_ops.cpp
     tests/transform_ops.cpp
+    tests/mesh_test.cpp
+    tests/io_test.cpp
     src/ecs/uuid.cpp
     src/ecs/scene.cpp
     src/ecs/component_registry.cpp
@@ -221,6 +238,7 @@ add_executable(Open_PhysX_tests
     src/persistence/app_data.cpp
     src/persistence/recent_files.cpp
     src/logic/Simulation.cpp
+    ${OPENPHYSX_IO_SOURCES}
 )
 target_include_directories(Open_PhysX_tests PRIVATE src)
 target_link_libraries(Open_PhysX_tests PRIVATE doctest::doctest EnTT::EnTT nlohmann_json::nlohmann_json)

@@ -56,6 +56,34 @@ void draw_body(const RigidBody& body, bool selected)
     rlPopMatrix();
 }
 
+void draw_mesh(const ::Model& model, const RigidBody& body, bool selected)
+{
+    Vec3 x_axis;
+    Vec3 y_axis;
+    Vec3 z_axis;
+    quat_to_axes(body.rotation, x_axis, y_axis, z_axis);
+
+    const float matrix[16] = {
+        x_axis.x, x_axis.y, x_axis.z, 0.0f,
+        y_axis.x, y_axis.y, y_axis.z, 0.0f,
+        z_axis.x, z_axis.y, z_axis.z, 0.0f,
+        body.position.x, body.position.y, body.position.z, 1.0f,
+    };
+
+    rlPushMatrix();
+    rlMultMatrixf(matrix);
+    DrawModel(model, {0.0f, 0.0f, 0.0f}, 1.0f, to_color(body.color));
+    const Color wire = selected ? Color{232, 158, 62, 255}
+                                : Color{
+                                      static_cast<unsigned char>(std::clamp(body.color.r * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      static_cast<unsigned char>(std::clamp(body.color.g * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      static_cast<unsigned char>(std::clamp(body.color.b * 0.55f + 0.45f, 0.0f, 1.0f) * 255.0f),
+                                      255,
+                                  };
+    DrawModelWires(model, {0.0f, 0.0f, 0.0f}, 1.0f, wire);
+    rlPopMatrix();
+}
+
 } // namespace
 
 void Renderer::init()
@@ -70,6 +98,7 @@ void Renderer::init()
 
 void Renderer::shutdown()
 {
+    mesh_cache_.clear();
     if (target_.id != 0)
     {
         UnloadRenderTexture(target_);
@@ -238,7 +267,23 @@ void Renderer::render(const ISimulation& simulation)
         DrawGrid(state.grid_slices, state.grid_spacing);
 
     for (const UUID id : DrawableObjects(scene))
-        draw_body(simulation.visual_body_of(id), EntitySelected(scene.FindByUUID(id)));
+    {
+        const Entity entity = scene.FindByUUID(id);
+        const bool selected = EntitySelected(entity);
+        const RigidBody body = simulation.visual_body_of(id);
+
+        uint32_t mesh_id = 0;
+        if (entity && entity.Has<PrimitiveBoxComponent>())
+            mesh_id = entity.Get<PrimitiveBoxComponent>().mesh_id;
+
+        const Mesh* mesh = (mesh_id > 0) ? scene.find_mesh(mesh_id) : nullptr;
+        const ::Model* model = mesh ? mesh_cache_.get_or_upload(mesh_id, scene.mesh_revision(), *mesh) : nullptr;
+
+        if (model)
+            draw_mesh(*model, body, selected);
+        else
+            draw_body(body, selected);
+    }
 
     EndMode3D();
     EndTextureMode();

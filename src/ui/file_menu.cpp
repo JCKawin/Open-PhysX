@@ -1,5 +1,6 @@
 #include "ui/file_menu.hpp"
 
+#include "ecs/object_ops.hpp"
 #include "logic/ISimulation.h"
 #include "persistence/app_data.hpp"
 #include "renderer/IRenderer.h"
@@ -9,13 +10,22 @@
 
 #include "raylib.h"
 
+#include "io/FormatDetect.h"
+#include "io/Import.h"
+#include "io/ObjExport.h"
+#include "io/ObjImport.h"
+#include "io/StlImport.h"
+
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 namespace openphysx {
 namespace {
 
 nfdfilteritem_t kProjectFilter[] = {{"OpenPhysX project", "opx"}};
+nfdfilteritem_t kImportFilter[] = {{"3D Model (*.obj;*.stl;*.blend)", "obj,stl,blend"}};
+nfdfilteritem_t kExportObjFilter[] = {{"Wavefront OBJ (*.obj)", "obj"}};
 
 std::filesystem::path path_from_dialog(const nfdchar_t* text)
 {
@@ -253,6 +263,76 @@ void DrawFileMenu(FileSession& session, ISimulation& simulation, IRenderer& rend
     if (ImGui::MenuItem("Recover Autosave...", nullptr, false, !session.crashed.empty()))
         session.recovery_popup = true;
     ImGui::Separator();
+    if (ImGui::MenuItem("Import..."))
+    {
+        NFD::UniquePath chosen;
+        const nfdresult_t res = NFD::OpenDialog(chosen, kImportFilter, 1);
+        if (res == NFD_OKAY)
+        {
+            session.import_file_path = path_from_dialog(chosen.get());
+            // Read first 16 bytes for format detection
+            uint8_t head[16] = {};
+            std::size_t bytes_read = 0;
+            FILE* f = nullptr;
+#if defined(_WIN32)
+            f = _wfopen(session.import_file_path.c_str(), L"rb");
+#else
+            f = std::fopen(session.import_file_path.c_str(), "rb");
+#endif
+            if (f)
+            {
+                bytes_read = std::fread(head, 1, sizeof(head), f);
+                std::fclose(f);
+            }
+            const Format fmt = detect_format(session.import_file_path, std::span<const uint8_t>(head, bytes_read));
+            if (fmt == Format::Blend)
+            {
+                show_error(session, blend_rejection_message());
+            }
+            else if (fmt == Format::Unknown)
+            {
+                show_error(session, "Unsupported file format: " + session.import_file_path.extension().string());
+            }
+            else
+            {
+                session.import_popup = true;
+                session.import_scale = 1.0f;
+                // Z-up default on for OBJ/STL
+                session.import_z_up = (fmt == Format::Obj || fmt == Format::Stl);
+                session.show_z_up_checkbox = (fmt == Format::Obj || fmt == Format::Stl || fmt == Format::Ply);
+            }
+        }
+    }
+    if (ImGui::MenuItem("Export OBJ..."))
+    {
+        Entity active = simulation.active_entity();
+        uint32_t mesh_id = 0;
+        if (active && active.Has<PrimitiveBoxComponent>())
+            mesh_id = active.Get<PrimitiveBoxComponent>().mesh_id;
+
+        const Mesh* mesh = (mesh_id > 0) ? simulation.scene().find_mesh(mesh_id) : nullptr;
+        if (!mesh)
+        {
+            show_error(session, "Active object has no mesh to export.");
+        }
+        else
+        {
+            NFD::UniquePath chosen;
+            const nfdresult_t res = NFD::SaveDialog(chosen, kExportObjFilter, 1, nullptr, "model.obj");
+            if (res == NFD_OKAY)
+            {
+                std::filesystem::path out_path = path_from_dialog(chosen.get());
+                if (out_path.extension() != ".obj")
+                    out_path += ".obj";
+                ObjExportOptions opts{};
+                opts.apply_transform = false;
+                std::string err = export_obj(*mesh, "ExportedMesh", nullptr, opts, out_path);
+                if (!err.empty())
+                    show_error(session, err);
+            }
+        }
+    }
+    ImGui::Separator();
     if (ImGui::MenuItem("Exit", "Ctrl+Q"))
         request(session, FilePending::Exit, simulation, renderer, commands, quit);
     ImGui::EndMenu();
@@ -396,6 +476,85 @@ void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& re
         if (ImGui::Button("OK"))
         {
             session.error.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (session.import_popup)
+    {
+        ImGui::OpenPopup("Import Model");
+        session.import_popup = false;
+    }
+    if (ImGui::BeginPopupModal("Import Model", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("File: %s", session.import_file_path.filename().string().c_str());
+        ImGui::Separator();
+
+        ImGui::InputFloat("Scale", &session.import_scale, 0.1f, 1.0f, "%.3f");
+        if (session.import_scale <= 0.0f)
+            session.import_scale = 0.001f;
+
+        if (session.show_z_up_checkbox)
+        {
+            ImGui::Checkbox("Convert Z-up to Y-up", &session.import_z_up);
+            ImGui::TextDisabled("Applies (x, z, -y) conversion for CAD / Blender models");
+        }
+
+        ImGui::Separator();
+        if (ImGui::Button("Import", ImVec2(120, 0)))
+        {
+            ImportOptions opts{};
+            opts.scale = session.import_scale;
+            opts.z_up = session.import_z_up;
+
+            ImportResult r{};
+            const std::string ext = session.import_file_path.extension().string();
+            if (ext == ".obj" || ext == ".OBJ")
+                r = import_obj(session.import_file_path, opts);
+            else if (ext == ".stl" || ext == ".STL")
+                r = import_stl(session.import_file_path, opts);
+            else
+                r.error = "Unsupported import format: " + ext;
+
+            if (!r.error.empty() || !r.mesh)
+            {
+                show_error(session, r.error.empty() ? "Import failed." : r.error);
+            }
+            else
+            {
+                // Capture state before adding object for undo (B3.8)
+                EditSnapshot before;
+                before.state = simulation.state();
+                before.scene = simulation.editor_scene();
+                before.active = simulation.active_id();
+
+                Scene& scene = simulation.scene();
+                const uint32_t mesh_id = scene.add_mesh(std::move(*r.mesh));
+
+                const std::string stem = session.import_file_path.stem().string();
+                const UUID id = AddBoxObject(scene);
+                Entity ent = scene.FindByUUID(id);
+                if (ent)
+                {
+                    scene.SetName(ent, stem);
+                    if (ent.Has<PrimitiveBoxComponent>())
+                        ent.Get<PrimitiveBoxComponent>().mesh_id = mesh_id;
+                    simulation.set_active(id);
+                }
+
+                EditSnapshot after;
+                after.state = simulation.state();
+                after.scene = simulation.editor_scene();
+                after.active = simulation.active_id();
+
+                commands.Commit(before, after, false);
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape))
+        {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();

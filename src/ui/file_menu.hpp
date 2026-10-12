@@ -42,6 +42,14 @@ struct FileSession
     std::string error;
     LoadReport load_report;
     bool load_report_open = false;
+
+    // Import/Export modal state (B3.7, B3.11, B4.5)
+    bool import_popup = false;
+    std::filesystem::path import_file_path;
+    float import_scale = 1.0f;
+    bool import_z_up = true;
+    bool show_z_up_checkbox = true;
+    std::string import_status_info;
 };
 
 void InitFileDialogs();

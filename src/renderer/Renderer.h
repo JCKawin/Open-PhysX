@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer/IRenderer.h"
+#include "renderer/MeshCache.h"
 
 #include "raylib.h"
 
@@ -51,6 +52,7 @@ private:
     Camera3D camera_{};
     View3D view_{};
     Smooth smooth_{};
+    MeshCache mesh_cache_{};
 };
 
 } // namespace openphysx

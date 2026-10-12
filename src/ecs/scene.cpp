@@ -79,6 +79,8 @@ Scene::Scene(Scene&& other) noexcept
     , destroy_queue_(std::move(other.destroy_queue_))
     , pending_(std::move(other.pending_))
     , unknown_(std::move(other.unknown_))
+    , meshes_(std::move(other.meshes_))
+    , mesh_revision_(other.mesh_revision_)
     , version_(other.version_)
 {
     Rebind();
@@ -94,6 +96,8 @@ Scene& Scene::operator=(Scene&& other) noexcept
     destroy_queue_ = std::move(other.destroy_queue_);
     pending_ = std::move(other.pending_);
     unknown_ = std::move(other.unknown_);
+    meshes_ = std::move(other.meshes_);
+    mesh_revision_ = other.mesh_revision_;
     version_ = other.version_;
     Rebind();
     return *this;
@@ -414,6 +418,8 @@ void Scene::CopyEntitiesFrom(const Scene& other)
         }
     }
     unknown_ = other.unknown_;
+    meshes_ = other.meshes_;
+    mesh_revision_ = other.mesh_revision_;
 }
 
 void Scene::SetUnknownComponents(UUID id, std::vector<UnknownComponent> components)
@@ -429,7 +435,7 @@ void Scene::SetUnknownComponents(UUID id, std::vector<UnknownComponent> componen
 bool operator==(const Scene& a, const Scene& b)
 {
     EnsureComponentsRegistered();
-    if (a.creation_order_ != b.creation_order_ || a.unknown_ != b.unknown_)
+    if (a.creation_order_ != b.creation_order_ || a.unknown_ != b.unknown_ || a.meshes_ != b.meshes_)
         return false;
     for (const UUID id : a.creation_order_)
     {

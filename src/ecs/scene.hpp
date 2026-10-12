@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Mesh.h"
 #include "ecs/components/core.hpp"
 #include "ecs/components/primitive.hpp"
 #include "ecs/components/runtime.hpp"
@@ -75,6 +76,22 @@ public:
     const std::vector<UUID>& CreationOrder() const { return creation_order_; }
     std::uint32_t Version() const { return version_; }
 
+    // --- Mesh library (B1.4) ---
+    uint32_t add_mesh(Mesh m)
+    {
+        meshes_.push_back(std::move(m));
+        ++mesh_revision_;
+        return static_cast<uint32_t>(meshes_.size());
+    }
+
+    const Mesh* find_mesh(uint32_t id) const
+    {
+        return (id >= 1 && id <= meshes_.size()) ? &meshes_[id - 1] : nullptr;
+    }
+
+    const std::vector<Mesh>& meshes() const { return meshes_; }
+    uint64_t mesh_revision() const { return mesh_revision_; }
+
     // Components from a file that this build does not know. They are written back unchanged.
     struct UnknownComponent
     {
@@ -104,6 +121,8 @@ private:
     std::vector<UUID> destroy_queue_;
     std::unordered_set<UUID> pending_;
     std::unordered_map<UUID, std::vector<UnknownComponent>> unknown_;
+    std::vector<Mesh> meshes_;
+    uint64_t mesh_revision_ = 0;
     std::uint32_t version_ = kSceneVersion;
 };
 

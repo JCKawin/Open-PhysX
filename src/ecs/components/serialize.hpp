@@ -219,7 +219,7 @@ inline void from_json(const nlohmann::json& j, EditorStateComponent& value)
 
 inline void to_json(nlohmann::json& j, const PrimitiveBoxComponent& value)
 {
-    j = nlohmann::json{{"size", value.size}, {"color", value.color}};
+    j = nlohmann::json{{"size", value.size}, {"color", value.color}, {"mesh_id", value.mesh_id}};
 }
 
 inline void from_json(const nlohmann::json& j, PrimitiveBoxComponent& value)
@@ -229,6 +229,7 @@ inline void from_json(const nlohmann::json& j, PrimitiveBoxComponent& value)
         return;
     value.size = j.value("size", value.size);
     value.color = j.value("color", value.color);
+    value.mesh_id = j.value("mesh_id", 0u);
 }
 
 inline void to_json(nlohmann::json& j, const MeshRendererComponent& value)
