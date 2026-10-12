@@ -18,6 +18,7 @@ inline RigidBody WorldBody(const Scene& scene, const Entity& entity)
     const TransformComponent world = scene.GetWorldTransform(entity);
     body.position = world.position;
     body.rotation = world.rotation;
+    body.scale = world.scale;
     if (entity.Has<PrimitiveBoxComponent>())
     {
         const PrimitiveBoxComponent& box = entity.Get<PrimitiveBoxComponent>();

@@ -31,6 +31,8 @@ struct RigidBody
 {
     Vec3 position{0.0f, 1.0f, 0.0f};
     Vec3 size{2.0f, 2.0f, 2.0f};
+    // Object scale. Separate from size: size is the box extent (already scaled), scale is what a mesh multiplies by.
+    Vec3 scale{1.0f, 1.0f, 1.0f};
     Quat rotation{};
     Rgb color{0.15f, 0.35f, 0.85f};
 };
@@ -66,7 +68,7 @@ inline bool operator==(const Rgb& a, const Rgb& b)
 
 inline bool operator==(const RigidBody& a, const RigidBody& b)
 {
-    return a.position == b.position && a.size == b.size && a.rotation == b.rotation && a.color == b.color;
+    return a.position == b.position && a.size == b.size && a.scale == b.scale && a.rotation == b.rotation && a.color == b.color;
 }
 
 inline bool operator==(const SimulationState& a, const SimulationState& b)

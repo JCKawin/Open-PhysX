@@ -61,7 +61,8 @@ void draw_mesh(const ::Model& model, const RigidBody& body, bool selected)
     Vec3 x_axis;
     Vec3 y_axis;
     Vec3 z_axis;
-    quat_to_axes(body.rotation, x_axis, y_axis, z_axis);
+    // body.size is the box extent (default 2 m times scale). The mesh is already in its own units.
+    scaled_axes(body.rotation, body.scale, x_axis, y_axis, z_axis);
 
     const float matrix[16] = {
         x_axis.x, x_axis.y, x_axis.z, 0.0f,

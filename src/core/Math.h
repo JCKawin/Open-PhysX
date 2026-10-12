@@ -163,6 +163,15 @@ inline void quat_to_axes(Quat q, Vec3& x_axis, Vec3& y_axis, Vec3& z_axis)
     z_axis = quat_rotate(q, {0.0f, 0.0f, 1.0f});
 }
 
+// Object-space scale. Columns of the draw matrix are the local axes times this scale.
+inline void scaled_axes(Quat rotation, Vec3 scale, Vec3& x_axis, Vec3& y_axis, Vec3& z_axis)
+{
+    quat_to_axes(rotation, x_axis, y_axis, z_axis);
+    x_axis = vec_scale(x_axis, scale.x);
+    y_axis = vec_scale(y_axis, scale.y);
+    z_axis = vec_scale(z_axis, scale.z);
+}
+
 // Intrinsic XYZ: v' = Rz * Ry * Rx * v.
 inline Quat quat_from_euler_xyz(Vec3 radians)
 {

@@ -1,3 +1,4 @@
+#include "core/Math.h"
 #include "ecs/components/physics.hpp"
 #include "ecs/components/render.hpp"
 #include "ecs/components/slots.hpp"
@@ -268,7 +269,24 @@ TEST_CASE("scale multiplies the box in the draw pose and stays on the transform"
     const RigidBody body = WorldBody(scene, cube);
     CHECK(body.size.x == doctest::Approx(4.0f));
     CHECK(body.size.y == doctest::Approx(1.0f));
+    CHECK(body.size.z == doctest::Approx(2.0f));
+    CHECK(body.scale.x == doctest::Approx(2.0f));
+    CHECK(body.scale.y == doctest::Approx(0.5f));
+    CHECK(body.scale.z == doctest::Approx(1.0f));
     CHECK(cube.Get<PrimitiveBoxComponent>().size.x == doctest::Approx(2.0f));
+}
+
+TEST_CASE("mesh draw axes carry object scale and not the box size")
+{
+    Vec3 x_axis;
+    Vec3 y_axis;
+    Vec3 z_axis;
+    scaled_axes({}, {2.0f, 0.5f, 1.0f}, x_axis, y_axis, z_axis);
+    CHECK(x_axis.x == doctest::Approx(2.0f));
+    CHECK(x_axis.y == doctest::Approx(0.0f));
+    CHECK(x_axis.z == doctest::Approx(0.0f));
+    CHECK(y_axis.y == doctest::Approx(0.5f));
+    CHECK(z_axis.z == doctest::Approx(1.0f));
 }
 
 TEST_CASE("undo brings back a deleted object with the same id and selection")
