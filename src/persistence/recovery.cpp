@@ -15,6 +15,7 @@
 #include <windows.h>
 #else
 #include <csignal>
+#include <fcntl.h>
 #include <unistd.h>
 #endif
 
