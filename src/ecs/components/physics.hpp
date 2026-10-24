@@ -21,6 +21,18 @@ enum class ShapeType
     Capsule,
     Cylinder,
     Plane,
+    Hull,
+    TriangleMesh,
+};
+
+// Scene-owned rigid-body world settings.
+struct RigidBodyWorld
+{
+    Vec3 gravity{0.0f, -9.81f, 0.0f};
+    float time_scale{1.0f};
+    int substeps{10};
+    int solver_iterations{10};
+    bool muted{false};
 };
 
 enum class JointType
@@ -39,6 +51,7 @@ struct Mat3
     float m[9] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 };
 
+// Authored body. Velocities here are the seed for a solver, not live state.
 struct RigidBodyComponent
 {
     BodyType type = BodyType::Dynamic;
@@ -49,8 +62,12 @@ struct RigidBodyComponent
     Vec3 angularVelocity{};
     float linearDamping = 0.0f;
     float angularDamping = 0.05f;
+    Vec3 linearFactor{1.0f, 1.0f, 1.0f};
+    Vec3 angularFactor{1.0f, 1.0f, 1.0f};
     bool gravityEnabled = true;
     bool ccd = false;
+    bool canSleep = true;
+    bool startAsleep = false;
 };
 
 // One collider per entity. A body that needs more shapes uses child entities,
@@ -67,6 +84,7 @@ struct ColliderComponent
     std::uint32_t layer = 1;
     std::uint32_t mask = 0xffffffffu;
     bool isSensor = false;
+    bool shape_dirty = true;
 };
 
 struct PhysicsMaterialComponent
@@ -103,19 +121,27 @@ inline bool operator==(const Mat3& a, const Mat3& b)
     return true;
 }
 
+inline bool operator==(const RigidBodyWorld& a, const RigidBodyWorld& b)
+{
+    return a.gravity == b.gravity && a.time_scale == b.time_scale && a.substeps == b.substeps &&
+           a.solver_iterations == b.solver_iterations && a.muted == b.muted;
+}
+
 inline bool operator==(const RigidBodyComponent& a, const RigidBodyComponent& b)
 {
     return a.type == b.type && a.mass == b.mass && a.inertia == b.inertia && a.autoInertia == b.autoInertia &&
            a.linearVelocity == b.linearVelocity && a.angularVelocity == b.angularVelocity &&
            a.linearDamping == b.linearDamping && a.angularDamping == b.angularDamping &&
-           a.gravityEnabled == b.gravityEnabled && a.ccd == b.ccd;
+           a.linearFactor == b.linearFactor && a.angularFactor == b.angularFactor &&
+           a.gravityEnabled == b.gravityEnabled && a.ccd == b.ccd && a.canSleep == b.canSleep &&
+           a.startAsleep == b.startAsleep;
 }
 
 inline bool operator==(const ColliderComponent& a, const ColliderComponent& b)
 {
     return a.shape == b.shape && a.halfExtents == b.halfExtents && a.radius == b.radius && a.height == b.height &&
            a.offset == b.offset && a.rotation == b.rotation && a.physicsMaterial == b.physicsMaterial &&
-           a.layer == b.layer && a.mask == b.mask && a.isSensor == b.isSensor;
+           a.layer == b.layer && a.mask == b.mask && a.isSensor == b.isSensor && a.shape_dirty == b.shape_dirty;
 }
 
 inline bool operator==(const PhysicsMaterialComponent& a, const PhysicsMaterialComponent& b)

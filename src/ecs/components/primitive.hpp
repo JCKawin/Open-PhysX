@@ -9,7 +9,7 @@ struct PrimitiveBoxComponent
 {
     Vec3 size{2.0f, 2.0f, 2.0f};
     Rgb color{0.15f, 0.35f, 0.85f};
-    uint32_t mesh_id = 0; // 0 = default box primitive, >0 = scene mesh library id (1-based)
+    uint32_t mesh_id = 0; // 0 = box primitive. Otherwise a Scene::add_mesh id, not a vector index.
 };
 
 inline bool operator==(const PrimitiveBoxComponent& a, const PrimitiveBoxComponent& b)

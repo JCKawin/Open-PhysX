@@ -7,14 +7,40 @@
 
 namespace openphysx {
 
+namespace {
+
+void unload_model(::Model& model)
+{
+    if (model.meshCount > 0)
+        UnloadModel(model);
+    model = {};
+}
+
+} // namespace
+
 void MeshCache::clear()
 {
     for (auto& [id, entry] : cache_)
-    {
-        if (entry.model.meshCount > 0)
-            UnloadModel(entry.model);
-    }
+        unload_model(entry.model);
     cache_.clear();
+}
+
+void MeshCache::drop(uint32_t mesh_id)
+{
+    const auto it = cache_.find(mesh_id);
+    if (it == cache_.end())
+        return;
+    unload_model(it->second.model);
+    cache_.erase(it);
+}
+
+std::vector<uint32_t> MeshCache::ids() const
+{
+    std::vector<uint32_t> out;
+    out.reserve(cache_.size());
+    for (const auto& item : cache_)
+        out.push_back(item.first);
+    return out;
 }
 
 const ::Model* MeshCache::get_or_upload(uint32_t mesh_id, uint64_t mesh_revision, const Mesh& mesh)
@@ -27,9 +53,9 @@ const ::Model* MeshCache::get_or_upload(uint32_t mesh_id, uint64_t mesh_revision
         return &it->second.model;
 
     // Need rebuild
-    if (it != cache_.end() && it->second.model.meshCount > 0)
+    if (it != cache_.end())
     {
-        UnloadModel(it->second.model);
+        unload_model(it->second.model);
         cache_.erase(it);
     }
 

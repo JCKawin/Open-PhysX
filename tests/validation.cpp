@@ -188,9 +188,8 @@ TEST_CASE("a sane scene loads without validation warnings")
     body.mass = 2.0f;
     entity.Add<RigidBodyComponent>(body);
     ColliderComponent collider;
-    collider.shape = ShapeType::Capsule;
+    collider.shape = ShapeType::Sphere;
     collider.radius = 0.25f;
-    collider.height = 1.5f;
     entity.Add<ColliderComponent>(collider);
 
     Scene loaded;

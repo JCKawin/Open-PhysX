@@ -3,6 +3,7 @@
 #include "ecs/component_registry.hpp"
 #include "ecs/components/core.hpp"
 #include "ecs/components/primitive.hpp"
+#include "ecs/components/slots.hpp"
 #include "ecs/pose.hpp"
 
 #include <unordered_map>
@@ -196,6 +197,12 @@ std::vector<UUID> DuplicateObjects(Scene& scene, const std::vector<UUID>& ids)
         }
         copy_of[id] = copy.GetUUID();
         copies.push_back(copy.GetUUID());
+        // Row ids are the constraint's identity. A copy must not share them with the source.
+        if (copy.Has<ConstraintStackComponent>())
+        {
+            for (ConstraintEntry& entry : copy.Get<ConstraintStackComponent>().entries)
+                entry.id = GenerateUuid();
+        }
     }
 
     for (const UUID id : sources)

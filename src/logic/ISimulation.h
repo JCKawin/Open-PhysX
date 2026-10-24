@@ -11,6 +11,7 @@ public:
     virtual ~ISimulation() = default;
 
     virtual void reset() = 0;
+    // One display frame. Internally runs a capped number of fixed physics frames.
     virtual void step(float dt) = 0;
     virtual void seek(float time) = 0;
 

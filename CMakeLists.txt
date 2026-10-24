@@ -173,6 +173,14 @@ set(OPENPHYSX_SOURCES
     ${OPENPHYSX_IO_SOURCES}
 )
 
+# EnTT storage for every component overflows MinGW's default COFF section table.
+# The linker then reports those methods as undefined. big-obj raises the limit.
+if(MINGW)
+    set_source_files_properties(src/ecs/component_registry.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+elseif(MSVC)
+    set_source_files_properties(src/ecs/component_registry.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+endif()
+
 add_executable(${PROJECT_NAME} ${OPENPHYSX_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE rlImGui EnTT::EnTT nlohmann_json::nlohmann_json nfd::nfd)
@@ -219,6 +227,10 @@ add_executable(Open_PhysX_tests
     tests/validation.cpp
     tests/object_ops.cpp
     tests/transform_ops.cpp
+    tests/cursor.cpp
+    tests/physics_authoring.cpp
+    tests/rigid_step.cpp
+    tests/contacts.cpp
     tests/mesh_test.cpp
     tests/io_test.cpp
     src/ecs/uuid.cpp

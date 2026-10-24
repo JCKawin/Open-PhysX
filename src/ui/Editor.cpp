@@ -59,6 +59,7 @@ enum class ViewAction
     ClearRotation,
     ClearScale,
     Box,
+    ResetCursor,
 };
 
 struct AppBind
@@ -86,6 +87,7 @@ struct MouseBind
 constexpr int kOrbit = 1;
 constexpr int kPan = 2;
 constexpr int kZoom = 3;
+constexpr int kPlaceCursor = 4;
 
 constexpr AppBind kAppBinds[] = {
     {KEY_Z, kModCtrl | kModShift, AppAction::Redo},
@@ -123,15 +125,18 @@ constexpr KeyBind kViewBinds[] = {
     {KEY_H, 0, ViewAction::Hide, 0},
     {KEY_X, 0, ViewAction::Delete, 0},
     {KEY_DELETE, 0, ViewAction::Delete, 0},
+    {KEY_C, kModShift, ViewAction::ResetCursor, 0},
 };
 
 constexpr MouseBind kOpenPhysXMouse[] = {
+    {MOUSE_BUTTON_RIGHT, kModAlt, kPlaceCursor},
     {MOUSE_BUTTON_RIGHT, kModCtrl, kZoom},
     {MOUSE_BUTTON_RIGHT, kModShift, kPan},
     {MOUSE_BUTTON_RIGHT, 0, kOrbit},
 };
 
 constexpr MouseBind kBlenderMouse[] = {
+    {MOUSE_BUTTON_RIGHT, kModShift, kPlaceCursor},
     {MOUSE_BUTTON_MIDDLE, kModCtrl, kZoom},
     {MOUSE_BUTTON_MIDDLE, kModShift, kPan},
     {MOUSE_BUTTON_MIDDLE, 0, kOrbit},
@@ -426,7 +431,19 @@ void Editor::begin_transform(ISimulation& simulation, Xform xform, bool drag_con
         roots_.push_back(root);
         worlds.push_back(root.world);
     }
-    pivot_ = MeanPosition(worlds);
+    if (pivot == PivotMode::Cursor)
+        pivot_ = scene.cursor().position;
+    else if (pivot == PivotMode::Active)
+    {
+        pivot_ = worlds.front().position;
+        for (std::size_t i = 0; i < roots_.size(); ++i)
+        {
+            if (roots_[i].id == simulation.active_id())
+                pivot_ = worlds[i].position;
+        }
+    }
+    else
+        pivot_ = MeanPosition(worlds);
 
     // Local axes follow the active object. With no active root, the first root sets them.
     axis_frame_ = roots_.front().world.rotation;
@@ -538,7 +555,7 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
         const Vec3 direction = axis_ >= 0 ? axis_direction(axis_, local_axis_, axis_frame_) : forward;
         const Quat rotation = quat_axis_angle(direction, angle);
         for (const Root& root : roots_)
-            write(root, RotateWorld(root.world, pivot_, rotation));
+            write(root, RotateWorld(root.world, pivot_for(root), rotation));
     }
     else
     {
@@ -558,7 +575,7 @@ void Editor::apply_transform(ISimulation& simulation, IRenderer& renderer, const
             else
                 per_axis.z = factor;
 
-            TransformComponent next = ScaleWorld(root.world, pivot_, per_axis, kMinScale);
+            TransformComponent next = ScaleWorld(root.world, pivot_for(root), per_axis, kMinScale);
             if (snap && !has_typed)
             {
                 next.scale.x = std::max(kMinScale, std::round(next.scale.x / 0.1f) * 0.1f);
@@ -665,11 +682,47 @@ void Editor::clear_selected(ISimulation& simulation, Clear what)
     commit_edit(simulation, before, false);
 }
 
+Vec3 Editor::pivot_for(const Root& root) const
+{
+    if (pivot == PivotMode::Individual)
+        return root.world.position;
+    return pivot_;
+}
+
+void Editor::reset_cursor(ISimulation& simulation)
+{
+    if (simulation.simulating())
+        return;
+    const EditSnapshot before = capture(simulation);
+    simulation.scene().cursor() = {};
+    commit_edit(simulation, before, false);
+}
+
+bool Editor::place_cursor(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
+{
+    if (simulation.simulating())
+        return false;
+    std::vector<RigidBody> bodies;
+    const Scene& scene = simulation.scene();
+    for (const UUID id : DrawableObjects(scene))
+        bodies.push_back(simulation.visual_body_of(id));
+    Vec3 hit{};
+    if (!PlaceCursorOnRay(renderer.view(), sample.ndc_x, sample.ndc_y, sample.aspect, bodies, hit))
+        return false;
+    const EditSnapshot before = capture(simulation);
+    Cursor3D& cursor = simulation.scene().cursor();
+    if (cursor.snap)
+        hit = SnapPosition(hit, simulation.state().grid_spacing);
+    cursor.position = hit;
+    commit_edit(simulation, before, false);
+    return true;
+}
+
 void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample)
 {
     const Mods mods = current_mods();
     const MouseBind* mouse_binds = mouse == MousePreset::Blender ? kBlenderMouse : kOpenPhysXMouse;
-    const int mouse_count = 3;
+    const int mouse_count = 4;
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
@@ -691,6 +744,11 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
         const MouseBind& bind = mouse_binds[i];
         if (!IsMouseButtonPressed(bind.button) || !mods_match(mods, bind.mods))
             continue;
+        if (bind.kind == kPlaceCursor)
+        {
+            place_cursor(simulation, renderer, sample);
+            return;
+        }
         if (bind.kind == kOrbit)
             modal_ = Modal::Orbit;
         else if (bind.kind == kPan)
@@ -824,6 +882,9 @@ void Editor::try_invoke(ISimulation& simulation, IRenderer& renderer, const View
             press_x_ = sample.local_x;
             press_y_ = sample.local_y;
             tool = Tool::Select;
+            break;
+        case ViewAction::ResetCursor:
+            reset_cursor(simulation);
             break;
         }
         return;
@@ -1041,8 +1102,8 @@ void Editor::status_line(char* buffer, int size) const
 const char* Editor::nav_help() const
 {
     if (mouse == MousePreset::Blender)
-        return "MMB orbit   Shift+MMB pan   Wheel zoom   G R S transform   A all   Alt+A none   Shift+A add   Shift+D dup   X delete";
-    return "RMB orbit   Shift+RMB pan   Wheel zoom   G R S transform   A all   Alt+A none   Shift+A add   Shift+D dup   X delete";
+        return "MMB orbit   Shift+MMB pan   Wheel zoom   Shift+RMB cursor   Shift+C reset cursor   G R S transform";
+    return "RMB orbit   Shift+RMB pan   Wheel zoom   Alt+RMB cursor   Shift+C reset cursor   G R S transform";
 }
 
 } // namespace openphysx

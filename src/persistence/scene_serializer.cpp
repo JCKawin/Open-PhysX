@@ -1,6 +1,7 @@
 #include "persistence/scene_serializer.hpp"
 
 #include "ecs/component_registry.hpp"
+#include "ecs/physics_ops.hpp"
 #include "ecs/components/cfd.hpp"
 #include "ecs/components/physics.hpp"
 #include "ecs/components/primitive.hpp"
@@ -96,6 +97,15 @@ void resolve_references(Scene& scene, LoadReport& report)
             JointComponent& joint = entity.Get<JointComponent>();
             joint.bodyA = require_uuid(scene, joint.bodyA, "bodyA", entity, report);
             joint.bodyB = require_uuid(scene, joint.bodyB, "bodyB", entity, report);
+        }
+        if (entity.Has<ConstraintStackComponent>())
+        {
+            for (ConstraintEntry& entry : entity.Get<ConstraintStackComponent>().entries)
+            {
+                if (entry.id == kNullUuid)
+                    entry.id = GenerateUuid();
+                entry.target = require_uuid(scene, entry.target, "constraint target", entity, report);
+            }
         }
         if (entity.Has<ColliderComponent>())
         {
@@ -309,10 +319,17 @@ void validate_scene(Scene& scene, LoadReport& report)
         if (entity.Has<RigidBodyComponent>())
         {
             RigidBodyComponent& body = entity.Get<RigidBodyComponent>();
-            if (!finite(body.mass) || (body.type == BodyType::Dynamic && body.mass <= 0.0f))
+            ColliderComponent* collider = entity.Has<ColliderComponent>() ? &entity.Get<ColliderComponent>() : nullptr;
+            if (!finite(body.mass) || (IsActiveBody(body.type) && body.mass <= 0.0f))
             {
                 body.mass = 1.0f;
                 report.warning(name + " mass was not a positive value and was reset to 1.");
+            }
+            if (collider != nullptr && IsActiveBody(body.type) && !ShapeSupportedForActive(collider->shape))
+            {
+                collider->shape = ShapeType::Box;
+                collider->shape_dirty = true;
+                report.warning(name + " active collision shape is not supported and was set to box.");
             }
             bool inertia_ok = true;
             for (const float entry : body.inertia.m)
@@ -426,7 +443,12 @@ nlohmann::json WriteScene(const Scene& scene)
         entities.push_back(nlohmann::json{{"id", UuidToHex(id)}, {"components", std::move(components)}});
     }
 
-    return nlohmann::json{{"version", scene.Version()}, {"entities", std::move(entities)}};
+    return nlohmann::json{
+        {"version", scene.Version()},
+        {"entities", std::move(entities)},
+        {"cursor", scene.cursor()},
+        {"rigid_world", scene.world()},
+    };
 }
 
 std::expected<void, LoadError> ReadScene(const nlohmann::json& json, Scene& scene, LoadReport& report)
@@ -498,6 +520,12 @@ std::expected<void, LoadError> ReadScene(const nlohmann::json& json, Scene& scen
             }
             loaded.SetUnknownComponents(*id, std::move(unknown));
         }
+
+        if (json.contains("cursor"))
+            loaded.cursor() = json.at("cursor").get<Cursor3D>();
+        if (json.contains("rigid_world"))
+            loaded.world() = json.at("rigid_world").get<RigidBodyWorld>();
+        SanitizeWorld(loaded.world());
     }
     catch (const nlohmann::json::exception& ex)
     {

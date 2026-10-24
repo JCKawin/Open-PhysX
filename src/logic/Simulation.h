@@ -1,6 +1,7 @@
 #pragma once
 
 #include "logic/ISimulation.h"
+#include "logic/contacts.hpp"
 
 #include <optional>
 
@@ -35,13 +36,24 @@ public:
     RigidBody visual_body() const override;
     RigidBody visual_body_of(UUID id) const override;
 
+    void set_display_step_cap(int cap);
+    int display_step_cap() const { return display_step_cap_; }
+    int last_sim_frames() const { return last_sim_frames_; }
+
 private:
     void make_default_cube();
+    void seed_runtime();
+    void advance_clock(float dt);
 
     SimulationState state_{};
     Scene editor_{};
     std::optional<Scene> runtime_;
     UUID active_ = kNullUuid;
+    float physics_accum_ = 0.0f;
+    int display_step_cap_ = 4;
+    int last_sim_frames_ = 0;
+    bool in_step_ = false;
+    PhysicsScratch scratch_{};
 };
 
 } // namespace openphysx

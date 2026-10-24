@@ -2,6 +2,7 @@
 
 #include "core/Mesh.h"
 #include "ecs/components/core.hpp"
+#include "ecs/components/physics.hpp"
 #include "ecs/components/primitive.hpp"
 #include "ecs/components/runtime.hpp"
 #include "ecs/entity.hpp"
@@ -19,7 +20,7 @@ namespace openphysx {
 
 // Layout version of the scene. Bump it when a slot changes shape in a way older builds
 // cannot read. A file with a newer version is refused, never silently rewritten.
-inline constexpr std::uint32_t kSceneVersion = 1;
+inline constexpr std::uint32_t kSceneVersion = 2;
 
 struct SceneBackref
 {
@@ -70,27 +71,32 @@ public:
     // Destroying a parent destroys its children on the next flush.
     bool SetParent(Entity child, Entity parent, bool keep_world_transform);
     TransformComponent GetWorldTransform(Entity entity) const;
-    // Stores a world transform as the local transform, relative to the parent.
+    // Converts world TRS through the parent. A missing parent stores world as local.
     void SetWorldTransform(Entity entity, const TransformComponent& world) { ApplyWorld(entity, world); }
 
     const std::vector<UUID>& CreationOrder() const { return creation_order_; }
     std::uint32_t Version() const { return version_; }
 
-    // --- Mesh library (B1.4) ---
-    uint32_t add_mesh(Mesh m)
-    {
-        meshes_.push_back(std::move(m));
-        ++mesh_revision_;
-        return static_cast<uint32_t>(meshes_.size());
-    }
+    Cursor3D& cursor() { return cursor_; }
+    const Cursor3D& cursor() const { return cursor_; }
 
-    const Mesh* find_mesh(uint32_t id) const
-    {
-        return (id >= 1 && id <= meshes_.size()) ? &meshes_[id - 1] : nullptr;
-    }
+    RigidBodyWorld& world() { return world_; }
+    const RigidBodyWorld& world() const { return world_; }
+    void bump_physics() { ++physics_revision_; }
+    std::uint64_t physics_revision() const { return physics_revision_; }
 
-    const std::vector<Mesh>& meshes() const { return meshes_; }
+    // --- Mesh library ---
+    // Ids start at 1 and are not reused. They are not indexes into the library.
+    // find_mesh's pointer is valid only until the next add_mesh, remove_mesh, scene assignment, move, or snapshot restore.
+    uint32_t add_mesh(Mesh mesh);
+    bool remove_mesh(uint32_t id);
+    const Mesh* find_mesh(uint32_t id) const;
     uint64_t mesh_revision() const { return mesh_revision_; }
+    // Copies and undo snapshots share this id. A newly constructed scene does not.
+    std::uint64_t mesh_library() const { return mesh_library_; }
+
+    // Empty when the row id was never issued or its owner has been destroyed.
+    Entity FindConstraintOwner(UUID constraint_id) const;
 
     // Components from a file that this build does not know. They are written back unchanged.
     struct UnknownComponent
@@ -121,9 +127,22 @@ private:
     std::vector<UUID> destroy_queue_;
     std::unordered_set<UUID> pending_;
     std::unordered_map<UUID, std::vector<UnknownComponent>> unknown_;
-    std::vector<Mesh> meshes_;
+
+    struct MeshEntry
+    {
+        std::uint32_t id = 0;
+        Mesh mesh{};
+        bool operator==(const MeshEntry&) const = default;
+    };
+
+    std::vector<MeshEntry> meshes_;
+    std::uint32_t next_mesh_id_ = 1;
     uint64_t mesh_revision_ = 0;
+    std::uint64_t mesh_library_ = 0;
     std::uint32_t version_ = kSceneVersion;
+    Cursor3D cursor_{};
+    RigidBodyWorld world_{};
+    std::uint64_t physics_revision_ = 0;
 };
 
 inline bool operator==(const Scene::UnknownComponent& a, const Scene::UnknownComponent& b)

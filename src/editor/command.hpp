@@ -31,8 +31,8 @@ public:
     std::uint64_t revision_after = 0;
 };
 
-// Snapshot of the editor scene plus transport settings. The edit is already applied
-// when the stack records it. Redo applies `after`, undo applies `before`.
+// One undo record for an object or transform edit of authored state.
+// The edit is already applied when the stack records it. Redo applies `after`, undo applies `before`.
 class SnapshotCommand final : public Command
 {
 public:

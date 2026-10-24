@@ -1,7 +1,9 @@
+#include "core/Math.h"
 #include "ecs/scene.hpp"
 
 #include <doctest/doctest.h>
 
+#include <cmath>
 #include <vector>
 
 using namespace openphysx;
@@ -96,6 +98,64 @@ TEST_CASE("hierarchy reparent cycle and destroy")
     CHECK(scene.CreationOrder().empty());
 }
 
+TEST_CASE("keep-world parent and unparent preserve world pose")
+{
+    Scene scene;
+    Entity parent = scene.CreateEntity("Parent");
+    Entity child = scene.CreateEntity("Child");
+    parent.Get<TransformComponent>().position = {10.0f, 0.0f, 0.0f};
+    parent.Get<TransformComponent>().rotation = quat_axis_angle({0.0f, 1.0f, 0.0f}, kPi * 0.5f);
+    child.Get<TransformComponent>().position = {1.0f, 2.0f, 0.0f};
+    const TransformComponent before = scene.GetWorldTransform(child);
+
+    REQUIRE(scene.SetParent(child, parent, true));
+    const TransformComponent parented = scene.GetWorldTransform(child);
+    CHECK(parented.position.x == doctest::Approx(before.position.x).epsilon(1.0e-4));
+    CHECK(parented.position.y == doctest::Approx(before.position.y).epsilon(1.0e-4));
+    CHECK(parented.position.z == doctest::Approx(before.position.z).epsilon(1.0e-4));
+    CHECK(child.Get<RelationshipComponent>().parent == parent.GetUUID());
+
+    REQUIRE(scene.SetParent(child, {}, true));
+    const TransformComponent freed = scene.GetWorldTransform(child);
+    CHECK(freed.position.x == doctest::Approx(before.position.x).epsilon(1.0e-4));
+    CHECK(freed.position.y == doctest::Approx(before.position.y).epsilon(1.0e-4));
+    CHECK(freed.position.z == doctest::Approx(before.position.z).epsilon(1.0e-4));
+    CHECK(child.Get<RelationshipComponent>().parent == kNullUuid);
+    CHECK(parent.Get<RelationshipComponent>().children.empty());
+}
+
+TEST_CASE("SetWorldTransform writes local through a rotated parent")
+{
+    Scene scene;
+    Entity parent = scene.CreateEntity("Parent");
+    Entity child = scene.CreateEntity("Child");
+    parent.Get<TransformComponent>().position = {10.0f, 0.0f, 0.0f};
+    parent.Get<TransformComponent>().rotation = quat_axis_angle({0.0f, 1.0f, 0.0f}, kPi * 0.5f);
+    REQUIRE(scene.SetParent(child, parent, false));
+
+    TransformComponent world;
+    world.position = {10.0f, 4.0f, -2.0f};
+    scene.SetWorldTransform(child, world);
+    const TransformComponent got = scene.GetWorldTransform(child);
+    CHECK(got.position.x == doctest::Approx(10.0f).epsilon(1.0e-4));
+    CHECK(got.position.y == doctest::Approx(4.0f).epsilon(1.0e-4));
+    CHECK(got.position.z == doctest::Approx(-2.0f).epsilon(1.0e-4));
+}
+
+TEST_CASE("a stored parent cycle does not hang world lookup")
+{
+    Scene scene;
+    Entity a = scene.CreateEntity("A");
+    Entity b = scene.CreateEntity("B");
+    a.Get<TransformComponent>().position = {1.0f, 0.0f, 0.0f};
+    b.Get<TransformComponent>().position = {0.0f, 2.0f, 0.0f};
+    a.Get<RelationshipComponent>().parent = b.GetUUID();
+    b.Get<RelationshipComponent>().parent = a.GetUUID();
+    const TransformComponent world = scene.GetWorldTransform(a);
+    CHECK_FALSE(std::isnan(world.position.x));
+    CHECK_FALSE(std::isnan(world.position.y));
+}
+
 TEST_CASE("scene copy preserves uuids and survives moves")
 {
     Scene scene;
@@ -113,11 +173,29 @@ TEST_CASE("scene copy preserves uuids and survives moves")
     CHECK(copy.FindByUUID(42).Has<SelectionOutlineTag>());
     CHECK(copy.FindByUUID(child.GetUUID()).Get<RelationshipComponent>().parent == 42);
 
+    const std::uint64_t copy_library = copy.mesh_library();
     std::vector<Scene> moved;
     moved.push_back(std::move(copy));
+    CHECK(moved.front().mesh_library() == copy_library);
+    CHECK(copy.mesh_library() != copy_library);
     moved.push_back(Scene{});
     moved.push_back(Scene{});
     moved.erase(moved.begin() + 1);
+    CHECK(moved.front().mesh_library() == copy_library);
     CHECK(moved.front().FindByUUID(42));
     CHECK(moved.front().FindByName("Cube").Get<TransformComponent>().position.y == doctest::Approx(1.0f));
+
+    Scene donor = scene;
+    const std::uint64_t donor_library = donor.mesh_library();
+    Scene receiver;
+    const std::uint64_t receiver_before = receiver.mesh_library();
+    receiver = std::move(donor);
+    CHECK(receiver.mesh_library() == donor_library);
+    CHECK(donor.mesh_library() != donor_library);
+    CHECK(donor.mesh_library() != receiver_before);
+
+    Scene constructed(std::move(receiver));
+    CHECK(constructed.mesh_library() == donor_library);
+    CHECK(receiver.mesh_library() != donor_library);
+    CHECK(receiver.mesh_library() != receiver_before);
 }

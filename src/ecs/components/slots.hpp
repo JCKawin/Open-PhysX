@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ecs/uuid.hpp"
+
 #include <vector>
 
 namespace openphysx {
@@ -29,10 +31,12 @@ struct FluidRoleComponent
     FluidRole role = FluidRole::None;
 };
 
-// Fields arrive with the constraint epic. An empty list means "no constraints", which is
-// different from the component being absent.
+// An empty list means "no constraints", which is different from the component being absent.
+// `target` is an object UUID.
 struct ConstraintEntry
 {
+    UUID id = kNullUuid;
+    UUID target = kNullUuid;
 };
 
 struct ConstraintStackComponent
@@ -55,9 +59,9 @@ inline bool operator==(const FluidRoleComponent& a, const FluidRoleComponent& b)
     return a.role == b.role;
 }
 
-inline bool operator==(const ConstraintEntry&, const ConstraintEntry&)
+inline bool operator==(const ConstraintEntry& a, const ConstraintEntry& b)
 {
-    return true;
+    return a.id == b.id && a.target == b.target;
 }
 
 inline bool operator==(const ConstraintStackComponent& a, const ConstraintStackComponent& b)

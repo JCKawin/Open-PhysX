@@ -36,7 +36,7 @@ Project ProjectManager::capture(const ISimulation& simulation, const View3D& vie
     Project project;
     project.scene = simulation.editor_scene();
     project.scene.FlushDestroyed();
-    project.gravity = gravity_;
+    project.gravity = project.scene.world().gravity;
     project.timestep = timestep_;
     project.duration = simulation.state().duration;
     project.playback_speed = simulation.state().playback_speed;
@@ -94,7 +94,7 @@ void ProjectManager::apply(ISimulation& simulation, Project project, CommandStac
     const UUID active = selection.empty() ? kNullUuid : selection.front();
     simulation.set_active(ResolveActive(simulation.editor_scene(), active));
 
-    gravity_ = project.gravity;
+    gravity_ = project.scene.world().gravity;
     timestep_ = project.timestep;
     source_version_ = project.source_version;
     archived_migration_ = source_version_ >= Project::kFormatVersion;

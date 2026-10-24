@@ -20,9 +20,9 @@ This document tracks all major architecture and implementation changes made acro
 - **Validation:** `Mesh::validate()` checks `indices.size() % 3 == 0`, bounds check for all indices against vertex count, and matching/empty normal sizes.
 - **Vertex Normal Generation:** Area-weighted face normal accumulation into corners; handles degenerate zero-area faces safely without producing `NaN` (falls back to `(0, 1, 0)`). Computed once on import/creation, never per-frame.
 - **Cube Primitive (`make_cube`):** 24 vertices (4 per face, unshared) and 12 triangles (Decision D1). Face normals point outward from center. Bounds check confirmed.
-- **Scene Mesh Library:** `Scene` now owns `std::vector<Mesh>` with 1-based indexing (`add_mesh(m)`, `find_mesh(id)`), revision tracking (`mesh_revision_`).
+- **Scene Mesh Library:** `Scene` stores `MeshEntry` values under monotonic `uint32_t` ids (`add_mesh`, `remove_mesh`, `find_mesh`), with `mesh_revision_`. Ids are not vector indexes and are not reused. `find_mesh` returns null when the id is gone.
 - **Undo Integration:** Scene copy/move operators preserve mesh library.
-- **GPU Mesh Cache (`src/renderer/MeshCache.h/.cpp`):** Converts `const Mesh&` into raylib `::Model` via de-indexing (safe against 16-bit vertex limits), cached per `(mesh_id, mesh_revision)`.
+- **GPU Mesh Cache (`src/renderer/MeshCache.h/.cpp`):** Converts `const Mesh&` into raylib `::Model` via de-indexing (safe against 16-bit vertex limits), cached per `(mesh_id, mesh_revision)`. The next draw drops an id `find_mesh` no longer returns. Replacing the editor scene changes `mesh_library()` and clears the cache, so a new document does not reuse the upload for id 1.
 - **Renderer Integration:** `Renderer::render()` draws `::Model` when an entity's `PrimitiveBoxComponent.mesh_id > 0`, falling back cleanly to the box primitive when `mesh_id == 0`.
 
 ### Epic B2: Persisted Binary IO Foundation (`src/io/Binary.h`)

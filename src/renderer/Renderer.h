@@ -53,6 +53,8 @@ private:
     View3D view_{};
     Smooth smooth_{};
     MeshCache mesh_cache_{};
+    // Scene::mesh_library() last drawn. A new document clears the cache before id 1 is reused.
+    std::uint64_t uploaded_library_ = 0;
 };
 
 } // namespace openphysx

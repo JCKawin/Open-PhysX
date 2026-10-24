@@ -1,6 +1,8 @@
 #include "ui/Workspace.h"
 
+#include "core/Math.h"
 #include "ecs/object_ops.hpp"
+#include "ecs/physics_ops.hpp"
 #include "ecs/pose.hpp"
 #include "persistence/recovery.hpp"
 #include "ui/file_menu.hpp"
@@ -515,13 +517,24 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
                 const Vec3 euler = quat_to_euler_xyz(transform->rotation);
                 euler_cache_ = {rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z)};
             }
-            if (ImGui::DragFloat3("Rotation", &euler_cache_.x, 1.0f))
+            if (ImGui::DragFloat3("Rotation (XYZ °)", &euler_cache_.x, 1.0f))
                 transform->rotation = quat_from_euler_xyz(
                     {deg_to_rad(euler_cache_.x), deg_to_rad(euler_cache_.y), deg_to_rad(euler_cache_.z)});
             euler_active_ = ImGui::IsItemActive();
             arm_edit();
             ImGui::DragFloat3("Scale", &transform->scale.x, 0.01f, 0.05f, 20.0f);
+            if (ImGui::IsItemEdited())
+                TouchCollider(simulation.scene(), entity);
             arm_edit();
+
+            const TransformComponent world = simulation.scene().GetWorldTransform(entity);
+            Vec3 world_position = world.position;
+            const Vec3 world_euler = quat_to_euler_xyz(world.rotation);
+            Vec3 world_euler_deg = {rad_to_deg(world_euler.x), rad_to_deg(world_euler.y), rad_to_deg(world_euler.z)};
+            ImGui::BeginDisabled();
+            ImGui::DragFloat3("World Position", &world_position.x);
+            ImGui::DragFloat3("World Rotation (XYZ °)", &world_euler_deg.x);
+            ImGui::EndDisabled();
         }
         if (box != nullptr)
         {
@@ -530,6 +543,166 @@ void Workspace::draw_properties(ISimulation& simulation, IRenderer& renderer)
             ImGui::ColorEdit3("Color", box->color.data());
             arm_edit();
         }
+
+        Scene& scene = simulation.scene();
+        ImGui::BeginDisabled(simulation.simulating());
+        if (entity.Has<RigidBodyComponent>())
+        {
+            RigidBodyComponent& body = entity.Get<RigidBodyComponent>();
+            ColliderComponent* collider = entity.Has<ColliderComponent>() ? &entity.Get<ColliderComponent>() : nullptr;
+            PhysicsMaterialComponent* material =
+                entity.Has<PhysicsMaterialComponent>() ? &entity.Get<PhysicsMaterialComponent>() : nullptr;
+            if (ImGui::CollapsingHeader("Rigid Body", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                int kind = body.type == BodyType::Static ? 1 : body.type == BodyType::Kinematic ? 2 : 0;
+                if (ImGui::Combo("Body", &kind, "Active\0Passive\0Kinematic\0"))
+                {
+                    body.type = kind == 1 ? BodyType::Static : kind == 2 ? BodyType::Kinematic : BodyType::Dynamic;
+                    SanitizeRigidBody(body, collider);
+                    TouchRigidBody(scene, entity);
+                }
+                arm_edit();
+                ImGui::DragFloat("Mass", &body.mass, 0.05f, 0.0f, 1.0e6f);
+                if (ImGui::IsItemDeactivatedAfterEdit())
+                {
+                    SanitizeRigidBody(body, collider);
+                    TouchRigidBody(scene, entity);
+                }
+                arm_edit();
+                ImGui::DragFloat("Linear Damping", &body.linearDamping, 0.01f, 0.0f, 10.0f);
+                arm_edit();
+                ImGui::DragFloat("Angular Damping", &body.angularDamping, 0.01f, 0.0f, 10.0f);
+                arm_edit();
+                ImGui::Checkbox("Affected by Gravity", &body.gravityEnabled);
+                arm_edit();
+                ImGui::Checkbox("Can Sleep", &body.canSleep);
+                arm_edit();
+                ImGui::Checkbox("Start Asleep", &body.startAsleep);
+                arm_edit();
+                bool lock_x = body.linearFactor.x == 0.0f;
+                bool lock_y = body.linearFactor.y == 0.0f;
+                bool lock_z = body.linearFactor.z == 0.0f;
+                if (ImGui::Checkbox("Lock Location X", &lock_x))
+                    body.linearFactor.x = lock_x ? 0.0f : 1.0f;
+                arm_edit();
+                if (ImGui::Checkbox("Lock Location Y", &lock_y))
+                    body.linearFactor.y = lock_y ? 0.0f : 1.0f;
+                arm_edit();
+                if (ImGui::Checkbox("Lock Location Z", &lock_z))
+                    body.linearFactor.z = lock_z ? 0.0f : 1.0f;
+                arm_edit();
+                bool lock_rx = body.angularFactor.x == 0.0f;
+                bool lock_ry = body.angularFactor.y == 0.0f;
+                bool lock_rz = body.angularFactor.z == 0.0f;
+                if (ImGui::Checkbox("Lock Rotation X", &lock_rx))
+                    body.angularFactor.x = lock_rx ? 0.0f : 1.0f;
+                arm_edit();
+                if (ImGui::Checkbox("Lock Rotation Y", &lock_ry))
+                    body.angularFactor.y = lock_ry ? 0.0f : 1.0f;
+                arm_edit();
+                if (ImGui::Checkbox("Lock Rotation Z", &lock_rz))
+                    body.angularFactor.z = lock_rz ? 0.0f : 1.0f;
+                arm_edit();
+                if (collider != nullptr)
+                {
+                    int shape = 0;
+                    if (collider->shape == ShapeType::Sphere)
+                        shape = 1;
+                    else if (collider->shape == ShapeType::Hull)
+                        shape = 2;
+                    else if (collider->shape == ShapeType::TriangleMesh)
+                        shape = 3;
+                    if (ImGui::Combo("Collision Shape", &shape, "Box\0Sphere\0Convex Hull\0Triangle Mesh\0"))
+                    {
+                        static const ShapeType kShapes[] = {
+                            ShapeType::Box, ShapeType::Sphere, ShapeType::Hull, ShapeType::TriangleMesh};
+                        collider->shape = kShapes[shape];
+                        SanitizeRigidBody(body, collider);
+                        TouchCollider(scene, entity);
+                    }
+                    arm_edit();
+                    if (collider->shape == ShapeType::Box)
+                    {
+                        ImGui::DragFloat3("Half Extents", &collider->halfExtents.x, 0.05f, 0.01f, 100.0f);
+                        if (ImGui::IsItemEdited())
+                            TouchCollider(scene, entity);
+                        arm_edit();
+                    }
+                    if (collider->shape == ShapeType::Sphere)
+                    {
+                        ImGui::DragFloat("Radius", &collider->radius, 0.05f, 0.01f, 100.0f);
+                        if (ImGui::IsItemEdited())
+                            TouchCollider(scene, entity);
+                        arm_edit();
+                    }
+                    if (IsActiveBody(body.type) && !ShapeSupportedForActive(collider->shape))
+                        ImGui::TextUnformatted("This shape is not supported on an active body.");
+                }
+                if (material != nullptr)
+                {
+                    ImGui::DragFloat("Friction", &material->friction, 0.01f, 0.0f, 10.0f);
+                    arm_edit();
+                    ImGui::DragFloat("Restitution", &material->restitution, 0.01f, 0.0f, 1.0f);
+                    arm_edit();
+                }
+            }
+        }
+        else if (ImGui::Button("Add Rigid Body"))
+        {
+            const EditSnapshot before = editor_.frame_snapshot();
+            EnsureRigidBodyAuthoring(scene, entity);
+            editor_.commit_edit(simulation, before, false);
+        }
+        ImGui::EndDisabled();
+    }
+
+    if (ImGui::CollapsingHeader("3D Cursor", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        Cursor3D& cursor = simulation.scene().cursor();
+        ImGui::BeginDisabled(simulation.simulating());
+        ImGui::DragFloat3("Cursor Location", &cursor.position.x, 0.05f);
+        arm_edit();
+        if (!cursor_euler_active_)
+        {
+            const Vec3 euler = quat_to_euler_xyz(cursor.rotation);
+            cursor_euler_cache_ = {rad_to_deg(euler.x), rad_to_deg(euler.y), rad_to_deg(euler.z)};
+        }
+        if (ImGui::DragFloat3("Cursor Rotation (XYZ °)", &cursor_euler_cache_.x, 1.0f))
+            cursor.rotation = quat_from_euler_xyz(
+                {deg_to_rad(cursor_euler_cache_.x), deg_to_rad(cursor_euler_cache_.y), deg_to_rad(cursor_euler_cache_.z)});
+        cursor_euler_active_ = ImGui::IsItemActive();
+        arm_edit();
+        ImGui::Checkbox("Show Cursor", &cursor.visible);
+        arm_edit();
+        ImGui::Checkbox("Snap Cursor", &cursor.snap);
+        arm_edit();
+        if (ImGui::Button("Reset 3D Cursor", ImVec2(-1.0f, 0.0f)))
+            editor_.reset_cursor(simulation);
+        ImGui::EndDisabled();
+        ImGui::TextUnformatted(editor_.mouse == MousePreset::Blender ? "Shift+RMB places the cursor." : "Alt+RMB places the cursor.");
+    }
+
+    if (ImGui::CollapsingHeader("Rigid Body World", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        RigidBodyWorld& world = simulation.scene().world();
+        ImGui::BeginDisabled(simulation.simulating());
+        if (ImGui::DragFloat3("Gravity", &world.gravity.x, 0.05f))
+            TouchWorld(simulation.scene());
+        arm_edit();
+        if (ImGui::DragFloat("Time Scale", &world.time_scale, 0.05f, 0.0f, 10.0f))
+            TouchWorld(simulation.scene());
+        arm_edit();
+        if (ImGui::SliderInt("Substeps", &world.substeps, 1, 50))
+            TouchWorld(simulation.scene());
+        arm_edit();
+        if (ImGui::SliderInt("Solver Iterations", &world.solver_iterations, 1, 50))
+            TouchWorld(simulation.scene());
+        arm_edit();
+        if (ImGui::Checkbox("Mute Simulation", &world.muted))
+            TouchWorld(simulation.scene());
+        arm_edit();
+        SanitizeWorld(world);
+        ImGui::EndDisabled();
     }
 
     if (ImGui::CollapsingHeader("World", ImGuiTreeNodeFlags_DefaultOpen))
@@ -770,6 +943,18 @@ void Workspace::draw_tools(ISimulation& simulation, IRenderer& renderer)
     if (ImGui::RadioButton(ICON_FA_EXPAND "  Scale", editor_.tool == Tool::Scale))
         editor_.tool = Tool::Scale;
     ImGui::TextWrapped("G move, R rotate, S scale. X Y Z lock an axis. Shift is precise, Ctrl snaps. Enter confirms, Esc cancels.");
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Pivot Point");
+    int pivot = static_cast<int>(editor_.pivot);
+    if (ImGui::RadioButton("Median Point", pivot == 0))
+        editor_.pivot = PivotMode::Median;
+    if (ImGui::RadioButton("Active Element", pivot == 1))
+        editor_.pivot = PivotMode::Active;
+    if (ImGui::RadioButton("3D Cursor", pivot == 2))
+        editor_.pivot = PivotMode::Cursor;
+    if (ImGui::RadioButton("Individual Origins", pivot == 3))
+        editor_.pivot = PivotMode::Individual;
 
     ImGui::Separator();
     ImGui::TextUnformatted("Display");

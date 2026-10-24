@@ -1,4 +1,5 @@
 #include "core/Math.h"
+#include "core/Mesh.h"
 #include "ecs/components/physics.hpp"
 #include "ecs/components/render.hpp"
 #include "ecs/components/slots.hpp"
@@ -39,10 +40,10 @@ Entity make_box(Scene& scene, const char* name, Vec3 position)
 
 } // namespace
 
-TEST_CASE("a new object has every slot empty and the scene is at version 1")
+TEST_CASE("a new object has every slot empty and the scene is at version 2")
 {
     Scene scene;
-    CHECK(scene.Version() == 1);
+    CHECK(scene.Version() == 2);
     const Entity cube = scene.FindByUUID(AddBoxObject(scene));
     REQUIRE(cube);
     CHECK(cube.Get<MeshRendererComponent>().meshAsset == kNullUuid);
@@ -328,4 +329,228 @@ TEST_CASE("undo of a duplicate removes the copy and keeps the source id")
 
     stack.Redo(simulation);
     CHECK(simulation.editor_scene().FindByUUID(copies.front()));
+}
+
+TEST_CASE("mesh ids survive removal of another mesh and are not reused")
+{
+    Scene scene;
+    Mesh small = make_cube({1.0f, 1.0f, 1.0f});
+    Mesh large = make_cube({2.0f, 2.0f, 2.0f});
+    const float large_x = large.positions.front().x;
+    const uint32_t first = scene.add_mesh(std::move(small));
+    const uint32_t second = scene.add_mesh(std::move(large));
+    CHECK(first != 0);
+    CHECK(second != first);
+
+    REQUIRE(scene.remove_mesh(first));
+    CHECK_FALSE(scene.remove_mesh(first));
+    CHECK(scene.find_mesh(first) == nullptr);
+    const Mesh* kept = scene.find_mesh(second);
+    REQUIRE(kept != nullptr);
+    CHECK(kept->positions.front().x == doctest::Approx(large_x));
+
+    const uint32_t third = scene.add_mesh(make_cube({3.0f, 3.0f, 3.0f}));
+    CHECK(third != first);
+    CHECK(third != second);
+    CHECK(scene.find_mesh(0) == nullptr);
+
+    const std::uint64_t library = scene.mesh_library();
+    Scene copy = scene;
+    CHECK(copy.mesh_library() == library);
+    CHECK(copy.find_mesh(second) != nullptr);
+    REQUIRE(copy.remove_mesh(second));
+    CHECK(scene.find_mesh(second) != nullptr);
+    CHECK(copy.find_mesh(second) == nullptr);
+    const uint32_t on_copy = copy.add_mesh(make_cube({4.0f, 4.0f, 4.0f}));
+    CHECK(on_copy != first);
+    CHECK(on_copy != second);
+    CHECK(on_copy != third);
+
+    Scene fresh;
+    CHECK(fresh.mesh_library() != library);
+}
+
+TEST_CASE("undo restores a removed mesh id")
+{
+    Simulation simulation;
+    CommandStack stack;
+    Scene& scene = simulation.editor_scene();
+    const uint32_t removed = scene.add_mesh(make_cube({4.0f, 4.0f, 4.0f}));
+    REQUIRE(scene.remove_mesh(removed));
+
+    Mesh cube = make_cube({1.0f, 1.0f, 1.0f});
+    const float vertex_x = cube.positions.front().x;
+    const uint32_t mesh_id = scene.add_mesh(std::move(cube));
+    const std::uint64_t revision = scene.mesh_revision();
+    const EditSnapshot before = capture(simulation);
+
+    REQUIRE(scene.remove_mesh(mesh_id));
+    stack.Commit(before, capture(simulation), false);
+    CHECK(simulation.editor_scene().find_mesh(mesh_id) == nullptr);
+
+    stack.Undo(simulation);
+    const Mesh* restored = simulation.editor_scene().find_mesh(mesh_id);
+    REQUIRE(restored != nullptr);
+    CHECK(restored->positions.front().x == doctest::Approx(vertex_x));
+    CHECK(simulation.editor_scene().mesh_revision() == revision);
+    const uint32_t fresh = simulation.editor_scene().add_mesh(make_cube({5.0f, 5.0f, 5.0f}));
+    CHECK(fresh != mesh_id);
+    CHECK(fresh != removed);
+
+    stack.Redo(simulation);
+    CHECK(simulation.editor_scene().find_mesh(mesh_id) == nullptr);
+}
+
+TEST_CASE("a deleted joint target and constraint target resolve as missing")
+{
+    Scene scene;
+    Entity body_a = make_box(scene, "A", {});
+    Entity body_b = make_box(scene, "B", {});
+    Entity owner = make_box(scene, "Owner", {});
+    const UUID id_a = body_a.GetUUID();
+    const UUID id_b = body_b.GetUUID();
+
+    Entity joint = scene.CreateEntity("Joint");
+    JointComponent joint_value;
+    joint_value.bodyA = id_a;
+    joint_value.bodyB = id_b;
+    joint.Add<JointComponent>(joint_value);
+    const UUID joint_id = joint.GetUUID();
+
+    ConstraintEntry row;
+    row.id = 0xC011ull;
+    row.target = id_a;
+    owner.Get<ConstraintStackComponent>().entries.push_back(row);
+    ConstraintEntry unassigned;
+    unassigned.id = kNullUuid;
+    unassigned.target = id_b;
+    owner.Get<ConstraintStackComponent>().entries.push_back(unassigned);
+
+    CHECK(scene.FindByUUID(id_a));
+    CHECK_FALSE(scene.FindByUUID(kNullUuid));
+    CHECK_FALSE(scene.FindConstraintOwner(kNullUuid));
+    CHECK(scene.FindConstraintOwner(row.id).GetUUID() == owner.GetUUID());
+
+    DeleteObjects(scene, {id_a});
+
+    CHECK_FALSE(scene.FindByUUID(id_a));
+    CHECK(id_a != kNullUuid);
+    CHECK(scene.FindByUUID(id_b));
+    const Entity joint_after = scene.FindByUUID(joint_id);
+    REQUIRE(joint_after);
+    CHECK(joint_after.Get<JointComponent>().bodyA == id_a);
+    CHECK_FALSE(scene.FindByUUID(joint_after.Get<JointComponent>().bodyA));
+    CHECK(scene.FindByUUID(joint_after.Get<JointComponent>().bodyB));
+
+    const Entity owner_after = scene.FindConstraintOwner(row.id);
+    REQUIRE(owner_after);
+    REQUIRE(owner_after.Get<ConstraintStackComponent>().entries.size() == 2);
+    CHECK(owner_after.Get<ConstraintStackComponent>().entries.front().target == id_a);
+    CHECK_FALSE(scene.FindByUUID(owner_after.Get<ConstraintStackComponent>().entries.front().target));
+
+    DeleteObjects(scene, {owner_after.GetUUID()});
+    CHECK_FALSE(scene.FindConstraintOwner(row.id));
+}
+
+TEST_CASE("undo of deleting a parent restores the parent link")
+{
+    Simulation simulation;
+    CommandStack stack;
+    Scene& scene = simulation.editor_scene();
+    Entity parent = make_box(scene, "Parent", {1.0f, 0.0f, 0.0f});
+    Entity child = make_box(scene, "Child", {0.0f, 2.0f, 0.0f});
+    REQUIRE(scene.SetParent(child, parent, false));
+    const UUID parent_id = parent.GetUUID();
+    const UUID child_id = child.GetUUID();
+    const Vec3 local_before = child.Get<TransformComponent>().position;
+    const std::vector<UUID> children_before = parent.Get<RelationshipComponent>().children;
+    CHECK(local_before.x == doctest::Approx(0.0f));
+    CHECK(local_before.y == doctest::Approx(2.0f));
+    CHECK(local_before.z == doctest::Approx(0.0f));
+    CHECK(contains(children_before, child_id));
+    const TransformComponent world_before = scene.GetWorldTransform(child);
+    const EditSnapshot before = capture(simulation);
+
+    DeleteObjects(scene, {parent_id});
+    simulation.set_active(child_id);
+    stack.Commit(before, capture(simulation), false);
+    CHECK_FALSE(simulation.editor_scene().FindByUUID(parent_id));
+    CHECK(simulation.editor_scene().FindByUUID(child_id).Get<RelationshipComponent>().parent == kNullUuid);
+
+    stack.Undo(simulation);
+    const Entity restored_child = simulation.editor_scene().FindByUUID(child_id);
+    const Entity restored_parent = simulation.editor_scene().FindByUUID(parent_id);
+    REQUIRE(restored_parent);
+    REQUIRE(restored_child);
+    CHECK(restored_child.Get<RelationshipComponent>().parent == parent_id);
+    CHECK(restored_child.Get<TransformComponent>().position.x == doctest::Approx(0.0f));
+    CHECK(restored_child.Get<TransformComponent>().position.y == doctest::Approx(2.0f));
+    CHECK(restored_child.Get<TransformComponent>().position.z == doctest::Approx(0.0f));
+    CHECK(contains(restored_parent.Get<RelationshipComponent>().children, child_id));
+
+    stack.Redo(simulation);
+    CHECK_FALSE(simulation.editor_scene().FindByUUID(parent_id));
+    const Entity baked = simulation.editor_scene().FindByUUID(child_id);
+    REQUIRE(baked);
+    CHECK(baked.Get<RelationshipComponent>().parent == kNullUuid);
+    CHECK(baked.Get<TransformComponent>().position.x == doctest::Approx(world_before.position.x));
+    CHECK(baked.Get<TransformComponent>().position.y == doctest::Approx(world_before.position.y));
+    CHECK(baked.Get<TransformComponent>().position.z == doctest::Approx(world_before.position.z));
+}
+
+TEST_CASE("a destroyed entity handle stays stale after the id is reused by the registry")
+{
+    Scene scene;
+    Entity stale = scene.CreateEntity("Gone");
+    const UUID stale_id = stale.GetUUID();
+    const entt::entity raw = stale.Raw();
+    scene.DestroyEntity(stale);
+    CHECK(stale);
+    scene.FlushDestroyed();
+    CHECK_FALSE(stale);
+    CHECK(stale.GetUUID() == kNullUuid);
+    CHECK_FALSE(scene.FindByUUID(stale_id));
+    CHECK(stale_id != kNullUuid);
+
+    Entity fresh = scene.CreateEntity("Next");
+    CHECK(fresh);
+    CHECK(fresh.GetUUID() != stale_id);
+    CHECK(entt::to_entity(fresh.Raw()) == entt::to_entity(raw));
+    CHECK(fresh.Raw() != raw);
+    CHECK_FALSE(stale);
+    CHECK_FALSE(scene.Registry().valid(raw));
+}
+
+TEST_CASE("duplicating a constraint row keeps the target and issues a new row id")
+{
+    Scene scene;
+    Entity owner = make_box(scene, "Owner", {});
+    Entity target = make_box(scene, "Target", {});
+    ConstraintEntry row;
+    row.id = 0xA11ull;
+    row.target = target.GetUUID();
+    owner.Get<ConstraintStackComponent>().entries.push_back(row);
+
+    const std::vector<UUID> copies = DuplicateObjects(scene, {owner.GetUUID()});
+    REQUIRE(copies.size() == 1);
+    const Entity copy = scene.FindByUUID(copies.front());
+    REQUIRE(copy.Get<ConstraintStackComponent>().entries.size() == 1);
+    const ConstraintEntry& copied = copy.Get<ConstraintStackComponent>().entries.front();
+    CHECK(copied.id != row.id);
+    CHECK(copied.id != kNullUuid);
+    CHECK(copied.target == target.GetUUID());
+    CHECK(scene.FindConstraintOwner(row.id).GetUUID() == owner.GetUUID());
+    CHECK(scene.FindConstraintOwner(copied.id).GetUUID() == copy.GetUUID());
+}
+
+TEST_CASE("a missing parent does not crash world transform lookup")
+{
+    Scene scene;
+    Entity child = make_box(scene, "Child", {0.0f, 2.0f, 0.0f});
+    const UUID missing = 0xBEEFull;
+    child.Get<RelationshipComponent>().parent = missing;
+    CHECK(missing != kNullUuid);
+    CHECK_FALSE(scene.FindByUUID(missing));
+    const TransformComponent world = scene.GetWorldTransform(child);
+    CHECK(world.position.y == doctest::Approx(2.0f));
 }

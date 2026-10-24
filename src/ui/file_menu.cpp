@@ -521,15 +521,19 @@ void DrawFilePopups(FileSession& session, ISimulation& simulation, IRenderer& re
             {
                 show_error(session, r.error.empty() ? "Import failed." : r.error);
             }
+            else if (simulation.simulating())
+            {
+                // Play mode writes the runtime copy. Import stays on the editor scene and is refused here.
+                show_error(session, "Stop playback before importing a model.");
+            }
             else
             {
-                // Capture state before adding object for undo (B3.8)
                 EditSnapshot before;
                 before.state = simulation.state();
                 before.scene = simulation.editor_scene();
                 before.active = simulation.active_id();
 
-                Scene& scene = simulation.scene();
+                Scene& scene = simulation.editor_scene();
                 const uint32_t mesh_id = scene.add_mesh(std::move(*r.mesh));
 
                 const std::string stem = session.import_file_path.stem().string();

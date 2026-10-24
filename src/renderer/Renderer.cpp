@@ -8,7 +8,9 @@
 #include "rlgl.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
+#include <vector>
 
 namespace openphysx {
 namespace {
@@ -257,6 +259,20 @@ void Renderer::render(const ISimulation& simulation)
     const SimulationState& state = simulation.state();
     const Scene& scene = simulation.scene();
 
+    if (uploaded_library_ != scene.mesh_library())
+    {
+        mesh_cache_.clear();
+        uploaded_library_ = scene.mesh_library();
+    }
+    else
+    {
+        for (const uint32_t id : mesh_cache_.ids())
+        {
+            if (scene.find_mesh(id) == nullptr)
+                mesh_cache_.drop(id);
+        }
+    }
+
     rlSetClipPlanes(view_.clip_near, view_.clip_far);
     sync_camera();
 
@@ -284,6 +300,21 @@ void Renderer::render(const ISimulation& simulation)
             draw_mesh(*model, body, selected);
         else
             draw_body(body, selected);
+    }
+
+    const Cursor3D& cursor = scene.cursor();
+    if (cursor.visible)
+    {
+        Vec3 x_axis;
+        Vec3 y_axis;
+        Vec3 z_axis;
+        quat_to_axes(cursor.rotation, x_axis, y_axis, z_axis);
+        const float length = std::clamp(view_.dist * 0.08f, 0.15f, 2.0f);
+        const Vec3 p = cursor.position;
+        DrawLine3D(to_vec3(p), to_vec3(vec_add(p, vec_scale(x_axis, length))), Color{220, 60, 60, 255});
+        DrawLine3D(to_vec3(p), to_vec3(vec_add(p, vec_scale(y_axis, length))), Color{60, 200, 80, 255});
+        DrawLine3D(to_vec3(p), to_vec3(vec_add(p, vec_scale(z_axis, length))), Color{60, 90, 220, 255});
+        DrawSphereWires(to_vec3(p), length * 0.12f, 8, 8, Color{230, 230, 230, 255});
     }
 
     EndMode3D();

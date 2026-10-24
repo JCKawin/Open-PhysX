@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/Types.h"
+
 #include <cstdint>
 
 namespace openphysx {
@@ -20,6 +22,13 @@ struct MeshGpuHandle
 struct PhysicsBodyHandle
 {
     int index = -1;
+    int built_shape = -1;
+    Vec3 position{};
+    Quat rotation{};
+    Vec3 linear_velocity{};
+    Vec3 angular_velocity{};
+    bool sleeping = false;
+    float sleep_timer = 0.0f;
 };
 
 struct ContactCache
@@ -46,7 +55,10 @@ inline bool operator==(const MeshGpuHandle& a, const MeshGpuHandle& b)
 
 inline bool operator==(const PhysicsBodyHandle& a, const PhysicsBodyHandle& b)
 {
-    return a.index == b.index;
+    return a.index == b.index && a.built_shape == b.built_shape && a.position == b.position &&
+           a.rotation == b.rotation && a.linear_velocity == b.linear_velocity &&
+           a.angular_velocity == b.angular_velocity && a.sleeping == b.sleeping &&
+           a.sleep_timer == b.sleep_timer;
 }
 
 inline bool operator==(const ContactCache& a, const ContactCache& b)

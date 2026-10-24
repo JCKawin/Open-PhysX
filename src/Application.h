@@ -23,7 +23,6 @@ private:
     Simulation simulation_{};
     Renderer renderer_{};
     Workspace workspace_{};
-    float accumulator_ = 0.0f;
     bool initialized_ = false;
 };
 

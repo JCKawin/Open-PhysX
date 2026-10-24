@@ -20,6 +20,14 @@ enum class Tool
     Scale,
 };
 
+enum class PivotMode
+{
+    Median,
+    Active,
+    Cursor,
+    Individual,
+};
+
 enum class MousePreset
 {
     OpenPhysX,
@@ -65,9 +73,11 @@ public:
     void outliner_click(ISimulation& simulation, UUID id, bool additive);
     void set_visible(ISimulation& simulation, UUID id, bool visible);
     void rename_object(ISimulation& simulation, UUID id, const std::string& name);
+    void reset_cursor(ISimulation& simulation);
 
     Tool tool = Tool::Select;
     MousePreset mouse = MousePreset::OpenPhysX;
+    PivotMode pivot = PivotMode::Median;
 
     bool box_visible() const;
     void box_rect(float& x0, float& y0, float& x1, float& y1) const;
@@ -115,6 +125,8 @@ private:
     void pick_at_cursor(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
     void clear_selected(ISimulation& simulation, Clear what);
     void try_invoke(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
+    bool place_cursor(ISimulation& simulation, IRenderer& renderer, const ViewportSample& sample);
+    Vec3 pivot_for(const Root& root) const;
 
     EditSnapshot frame_{};
     CommandStack commands_;

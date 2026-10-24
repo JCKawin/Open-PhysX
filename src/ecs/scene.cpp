@@ -4,25 +4,20 @@
 #include "ecs/component_registry.hpp"
 #include "ecs/components/render.hpp"
 #include "ecs/components/slots.hpp"
+#include "ecs/physics_ops.hpp"
+#include "ecs/transform_ops.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 
 namespace openphysx {
 namespace {
 
-Quat quat_conjugate(Quat q)
+std::uint64_t next_mesh_library()
 {
-    return {-q.x, -q.y, -q.z, q.w};
-}
-
-float safe_div(float value, float scale)
-{
-    if (std::fabs(scale) <= 1.0e-8f)
-        return value;
-    return value / scale;
+    static std::uint64_t next = 1;
+    return next++;
 }
 
 } // namespace
@@ -47,6 +42,7 @@ Entity::operator bool() const
 
 Scene::Scene()
 {
+    mesh_library_ = next_mesh_library();
     EnsureComponentsRegistered();
     registry_.ctx().emplace<SceneBackref>(SceneBackref{this});
     registry_.on_construct<IDComponent>().connect<&Scene::OnIdConstruct>();
@@ -80,9 +76,19 @@ Scene::Scene(Scene&& other) noexcept
     , pending_(std::move(other.pending_))
     , unknown_(std::move(other.unknown_))
     , meshes_(std::move(other.meshes_))
+    , next_mesh_id_(other.next_mesh_id_)
     , mesh_revision_(other.mesh_revision_)
+    , mesh_library_(other.mesh_library_)
     , version_(other.version_)
+    , cursor_(other.cursor_)
+    , world_(other.world_)
+    , physics_revision_(other.physics_revision_)
 {
+    other.next_mesh_id_ = 1;
+    other.mesh_library_ = next_mesh_library();
+    other.cursor_ = {};
+    other.world_ = {};
+    other.physics_revision_ = 0;
     Rebind();
 }
 
@@ -97,8 +103,18 @@ Scene& Scene::operator=(Scene&& other) noexcept
     pending_ = std::move(other.pending_);
     unknown_ = std::move(other.unknown_);
     meshes_ = std::move(other.meshes_);
+    next_mesh_id_ = other.next_mesh_id_;
+    other.next_mesh_id_ = 1;
     mesh_revision_ = other.mesh_revision_;
+    mesh_library_ = other.mesh_library_;
+    other.mesh_library_ = next_mesh_library();
     version_ = other.version_;
+    cursor_ = other.cursor_;
+    other.cursor_ = {};
+    world_ = other.world_;
+    other.world_ = {};
+    physics_revision_ = other.physics_revision_;
+    other.physics_revision_ = 0;
     Rebind();
     return *this;
 }
@@ -314,10 +330,10 @@ namespace {
 TransformComponent WorldTransformLimited(const Scene& scene, Entity entity, int depth)
 {
     TransformComponent local{};
-    if (!entity || !entity.Has<TransformComponent>() || depth > 64)
+    if (!entity || !entity.Has<TransformComponent>())
         return local;
     local = entity.Get<TransformComponent>();
-    if (!entity.Has<RelationshipComponent>())
+    if (depth > 64 || !entity.Has<RelationshipComponent>())
         return local;
 
     const UUID parent_id = entity.Get<RelationshipComponent>().parent;
@@ -327,21 +343,7 @@ TransformComponent WorldTransformLimited(const Scene& scene, Entity entity, int 
     if (!parent)
         return local;
 
-    const TransformComponent world_parent = WorldTransformLimited(scene, parent, depth + 1);
-    TransformComponent world;
-    world.scale = {
-        world_parent.scale.x * local.scale.x,
-        world_parent.scale.y * local.scale.y,
-        world_parent.scale.z * local.scale.z,
-    };
-    world.rotation = quat_normalize(quat_mul(world_parent.rotation, local.rotation));
-    const Vec3 scaled{
-        local.position.x * world_parent.scale.x,
-        local.position.y * world_parent.scale.y,
-        local.position.z * world_parent.scale.z,
-    };
-    world.position = vec_add(world_parent.position, quat_rotate(world_parent.rotation, scaled));
-    return world;
+    return ComposeLocalIntoParent(WorldTransformLimited(scene, parent, depth + 1), local);
 }
 
 } // namespace
@@ -353,30 +355,16 @@ void Scene::ApplyWorld(Entity entity, const TransformComponent& world)
     TransformComponent& local = entity.Get<TransformComponent>();
     const UUID parent_id = entity.Has<RelationshipComponent>() ? entity.Get<RelationshipComponent>().parent : kNullUuid;
     if (parent_id == kNullUuid)
-    {
         local = world;
-        return;
-    }
-    const Entity parent = FindByUUID(parent_id);
-    if (!parent)
+    else
     {
-        local = world;
-        return;
+        const Entity parent = FindByUUID(parent_id);
+        if (!parent)
+            local = world;
+        else
+            local = UncomposeWorldFromParent(GetWorldTransform(parent), world).local;
     }
-    const TransformComponent world_parent = GetWorldTransform(parent);
-    local.scale = {
-        safe_div(world.scale.x, world_parent.scale.x),
-        safe_div(world.scale.y, world_parent.scale.y),
-        safe_div(world.scale.z, world_parent.scale.z),
-    };
-    local.rotation = quat_normalize(quat_mul(quat_conjugate(world_parent.rotation), world.rotation));
-    const Vec3 relative = vec_sub(world.position, world_parent.position);
-    const Vec3 unrotated = quat_rotate(quat_conjugate(world_parent.rotation), relative);
-    local.position = {
-        safe_div(unrotated.x, world_parent.scale.x),
-        safe_div(unrotated.y, world_parent.scale.y),
-        safe_div(unrotated.z, world_parent.scale.z),
-    };
+    TouchCollider(*this, entity);
 }
 
 bool Scene::SetParent(Entity child, Entity parent, bool keep_world_transform)
@@ -419,7 +407,64 @@ void Scene::CopyEntitiesFrom(const Scene& other)
     }
     unknown_ = other.unknown_;
     meshes_ = other.meshes_;
+    next_mesh_id_ = other.next_mesh_id_;
     mesh_revision_ = other.mesh_revision_;
+    mesh_library_ = other.mesh_library_;
+    cursor_ = other.cursor_;
+    world_ = other.world_;
+    physics_revision_ = other.physics_revision_;
+}
+
+uint32_t Scene::add_mesh(Mesh mesh)
+{
+    const std::uint32_t id = next_mesh_id_++;
+    if (next_mesh_id_ == 0)
+        next_mesh_id_ = 1;
+    meshes_.push_back(MeshEntry{id, std::move(mesh)});
+    ++mesh_revision_;
+    return id;
+}
+
+bool Scene::remove_mesh(uint32_t id)
+{
+    if (id == 0)
+        return false;
+    const auto it = std::find_if(meshes_.begin(), meshes_.end(), [id](const MeshEntry& entry) { return entry.id == id; });
+    if (it == meshes_.end())
+        return false;
+    meshes_.erase(it);
+    ++mesh_revision_;
+    return true;
+}
+
+const Mesh* Scene::find_mesh(uint32_t id) const
+{
+    if (id == 0)
+        return nullptr;
+    for (const MeshEntry& entry : meshes_)
+    {
+        if (entry.id == id)
+            return &entry.mesh;
+    }
+    return nullptr;
+}
+
+Entity Scene::FindConstraintOwner(UUID constraint_id) const
+{
+    if (constraint_id == kNullUuid)
+        return {};
+    for (const UUID id : creation_order_)
+    {
+        const Entity entity = FindByUUID(id);
+        if (!entity || !entity.Has<ConstraintStackComponent>())
+            continue;
+        for (const ConstraintEntry& entry : entity.Get<ConstraintStackComponent>().entries)
+        {
+            if (entry.id == constraint_id)
+                return entity;
+        }
+    }
+    return {};
 }
 
 void Scene::SetUnknownComponents(UUID id, std::vector<UnknownComponent> components)
@@ -435,7 +480,8 @@ void Scene::SetUnknownComponents(UUID id, std::vector<UnknownComponent> componen
 bool operator==(const Scene& a, const Scene& b)
 {
     EnsureComponentsRegistered();
-    if (a.creation_order_ != b.creation_order_ || a.unknown_ != b.unknown_ || a.meshes_ != b.meshes_)
+    if (a.creation_order_ != b.creation_order_ || a.unknown_ != b.unknown_ || a.meshes_ != b.meshes_ ||
+        a.next_mesh_id_ != b.next_mesh_id_ || a.cursor_ != b.cursor_ || a.world_ != b.world_)
         return false;
     for (const UUID id : a.creation_order_)
     {

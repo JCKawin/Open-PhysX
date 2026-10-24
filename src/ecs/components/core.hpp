@@ -26,6 +26,15 @@ struct TransformComponent
     Vec3 scale{1.0f, 1.0f, 1.0f};
 };
 
+// Scene-owned 3D cursor. Not an object, a parent, or a physics body.
+struct Cursor3D
+{
+    Vec3 position{};
+    Quat rotation{};
+    bool visible = true;
+    bool snap = false;
+};
+
 // Parent and children are UUIDs. Zero parent means no parent. Child order is kept.
 struct RelationshipComponent
 {
@@ -52,6 +61,11 @@ inline bool operator==(const TagComponent& a, const TagComponent& b)
 inline bool operator==(const TransformComponent& a, const TransformComponent& b)
 {
     return a.position == b.position && a.rotation == b.rotation && a.scale == b.scale;
+}
+
+inline bool operator==(const Cursor3D& a, const Cursor3D& b)
+{
+    return a.position == b.position && a.rotation == b.rotation && a.visible == b.visible && a.snap == b.snap;
 }
 
 inline bool operator==(const RelationshipComponent& a, const RelationshipComponent& b)

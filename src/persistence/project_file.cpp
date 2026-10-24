@@ -319,6 +319,11 @@ std::expected<LoadReport, LoadError> ProjectFile::LoadChecked(const std::filesys
     if (auto scene = ReadScene(document.at("scene"), loaded.scene, report); !scene)
         return std::unexpected(scene.error());
 
+    if (!document.at("scene").contains("rigid_world"))
+        loaded.scene.world().gravity = loaded.gravity;
+    else
+        loaded.gravity = loaded.scene.world().gravity;
+
     out = std::move(loaded);
     return report;
 }

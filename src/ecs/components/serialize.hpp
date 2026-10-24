@@ -171,6 +171,50 @@ inline void from_json(const nlohmann::json& j, TagComponent& value)
     value.name = j.value("name", std::string("Entity"));
 }
 
+inline void to_json(nlohmann::json& j, const RigidBodyWorld& value)
+{
+    j = nlohmann::json{
+        {"gravity", value.gravity},
+        {"time_scale", value.time_scale},
+        {"substeps", value.substeps},
+        {"solver_iterations", value.solver_iterations},
+        {"muted", value.muted},
+    };
+}
+
+inline void from_json(const nlohmann::json& j, RigidBodyWorld& value)
+{
+    value = {};
+    if (!j.is_object())
+        return;
+    value.gravity = j.value("gravity", value.gravity);
+    value.time_scale = j.value("time_scale", value.time_scale);
+    value.substeps = j.value("substeps", value.substeps);
+    value.solver_iterations = j.value("solver_iterations", value.solver_iterations);
+    value.muted = j.value("muted", value.muted);
+}
+
+inline void to_json(nlohmann::json& j, const Cursor3D& value)
+{
+    j = nlohmann::json{
+        {"position", value.position},
+        {"rotation", value.rotation},
+        {"visible", value.visible},
+        {"snap", value.snap},
+    };
+}
+
+inline void from_json(const nlohmann::json& j, Cursor3D& value)
+{
+    value = {};
+    if (!j.is_object())
+        return;
+    value.position = j.value("position", value.position);
+    value.rotation = j.value("rotation", value.rotation);
+    value.visible = j.value("visible", true);
+    value.snap = j.value("snap", false);
+}
+
 inline void to_json(nlohmann::json& j, const TransformComponent& value)
 {
     j = nlohmann::json{{"position", value.position}, {"rotation", value.rotation}, {"scale", value.scale}};
@@ -278,6 +322,8 @@ inline const std::pair<const char*, ShapeType> kShapeTypes[] = {
     {"Capsule", ShapeType::Capsule},
     {"Cylinder", ShapeType::Cylinder},
     {"Plane", ShapeType::Plane},
+    {"Hull", ShapeType::Hull},
+    {"TriangleMesh", ShapeType::TriangleMesh},
 };
 
 inline const std::pair<const char*, JointType> kJointTypes[] = {
@@ -326,8 +372,12 @@ inline void to_json(nlohmann::json& j, const RigidBodyComponent& value)
         {"angularVelocity", value.angularVelocity},
         {"linearDamping", value.linearDamping},
         {"angularDamping", value.angularDamping},
+        {"linearFactor", value.linearFactor},
+        {"angularFactor", value.angularFactor},
         {"gravityEnabled", value.gravityEnabled},
         {"ccd", value.ccd},
+        {"canSleep", value.canSleep},
+        {"startAsleep", value.startAsleep},
     };
 }
 
@@ -344,14 +394,18 @@ inline void from_json(const nlohmann::json& j, RigidBodyComponent& value)
     value.angularVelocity = j.value("angularVelocity", value.angularVelocity);
     value.linearDamping = j.value("linearDamping", value.linearDamping);
     value.angularDamping = j.value("angularDamping", value.angularDamping);
+    value.linearFactor = j.value("linearFactor", value.linearFactor);
+    value.angularFactor = j.value("angularFactor", value.angularFactor);
     value.gravityEnabled = j.value("gravityEnabled", value.gravityEnabled);
     value.ccd = j.value("ccd", value.ccd);
+    value.canSleep = j.value("canSleep", value.canSleep);
+    value.startAsleep = j.value("startAsleep", value.startAsleep);
 }
 
 inline void to_json(nlohmann::json& j, const ColliderComponent& value)
 {
     j = nlohmann::json{
-        {"shape", enum_to_string(value.shape, kShapeTypes, 5)},
+        {"shape", enum_to_string(value.shape, kShapeTypes, 7)},
         {"halfExtents", value.halfExtents},
         {"radius", value.radius},
         {"height", value.height},
@@ -369,7 +423,7 @@ inline void from_json(const nlohmann::json& j, ColliderComponent& value)
     value = {};
     if (!j.is_object())
         return;
-    value.shape = enum_from_json(j, "shape", ShapeType::Box, kShapeTypes, 5);
+    value.shape = enum_from_json(j, "shape", ShapeType::Box, kShapeTypes, 7);
     value.halfExtents = j.value("halfExtents", value.halfExtents);
     value.radius = j.value("radius", value.radius);
     value.height = j.value("height", value.height);
@@ -649,14 +703,18 @@ inline void from_json(const nlohmann::json& j, FluidRoleComponent& value)
     value.role = enum_from_json(j, "role", FluidRole::None, kFluidRoles, 4);
 }
 
-inline void to_json(nlohmann::json& j, const ConstraintEntry&)
+inline void to_json(nlohmann::json& j, const ConstraintEntry& value)
 {
-    j = nlohmann::json::object();
+    j = nlohmann::json{{"id", uuid_to_json(value.id)}, {"target", uuid_to_json(value.target)}};
 }
 
-inline void from_json(const nlohmann::json&, ConstraintEntry& value)
+inline void from_json(const nlohmann::json& j, ConstraintEntry& value)
 {
     value = {};
+    if (!j.is_object())
+        return;
+    value.id = uuid_from_json(j, "id");
+    value.target = uuid_from_json(j, "target");
 }
 
 inline void to_json(nlohmann::json& j, const ConstraintStackComponent& value)

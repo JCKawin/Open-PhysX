@@ -205,21 +205,114 @@ TEST_CASE("a scene without an entities array is refused and the previous scene s
     CHECK(scene.FindByUUID(id));
 }
 
+TEST_CASE("loading a parent cycle breaks the loop")
+{
+    Scene scene;
+    Entity a = scene.CreateEntityWithUUID(0xA0ull, "A");
+    Entity b = scene.CreateEntityWithUUID(0xB0ull, "B");
+    a.Get<RelationshipComponent>().parent = b.GetUUID();
+    b.Get<RelationshipComponent>().parent = a.GetUUID();
+    a.Get<RelationshipComponent>().children = {b.GetUUID()};
+    b.Get<RelationshipComponent>().children = {a.GetUUID()};
+
+    LoadReport report;
+    Scene loaded;
+    REQUIRE(ReadScene(WriteScene(scene), loaded, report));
+    CHECK_FALSE(report.entries.empty());
+    const UUID parent_a = loaded.FindByUUID(0xA0ull).Get<RelationshipComponent>().parent;
+    const UUID parent_b = loaded.FindByUUID(0xB0ull).Get<RelationshipComponent>().parent;
+    const bool still_cycled = parent_a == 0xB0ull && parent_b == 0xA0ull;
+    CHECK_FALSE(still_cycled);
+}
+
 TEST_CASE("the scene version is written, a newer version is refused, and an unversioned file opens")
 {
     Scene scene;
     scene.CreateEntity("Cube");
-    CHECK(WriteScene(scene).at("version") == 1);
+    CHECK(WriteScene(scene).at("version") == 2);
 
     LoadReport report;
-    const nlohmann::json newer = {{"version", 2}, {"entities", nlohmann::json::array()}};
+    const nlohmann::json newer = {{"version", 3}, {"entities", nlohmann::json::array()}};
     const auto refused = ReadScene(newer, scene, report);
     CHECK_FALSE(refused.has_value());
     CHECK(refused.error().kind == LoadError::Kind::TooNew);
     CHECK(scene.FindByName("Cube"));
 
+    const nlohmann::json version_one = {{"version", 1}, {"entities", nlohmann::json::array()}};
+    CHECK(ReadScene(version_one, scene, report).has_value());
+
     const nlohmann::json unversioned = {{"entities", nlohmann::json::array()}};
     CHECK(ReadScene(unversioned, scene, report).has_value());
+}
+
+TEST_CASE("a constraint row keeps its id and drops a dangling target on load")
+{
+    nlohmann::json json = {
+        {"version", 1},
+        {"entities",
+         nlohmann::json::array({
+             nlohmann::json{
+                 {"id", "00000000000000aa"},
+                 {"components",
+                  {{"Tag", {{"name", "Owner"}}},
+                   {"ConstraintStack",
+                    {{"entries",
+                      nlohmann::json::array({
+                          {{"id", "00000000000000c1"}, {"target", "00000000000000bb"}},
+                          {{"target", "00000000000000aa"}},
+                          {{"id", "00000000000000c3"}, {"target", "0000000000000000"}},
+                          {{"target", "0000000000000000"}},
+                      })}}}}},
+             },
+         })},
+    };
+
+    Scene loaded;
+    LoadReport report;
+    REQUIRE(ReadScene(json, loaded, report));
+    const Entity owner = loaded.FindByUUID(0xaaull);
+    REQUIRE(owner);
+    const auto& entries = owner.Get<ConstraintStackComponent>().entries;
+    REQUIRE(entries.size() == 4);
+    CHECK(entries[0].id == 0xc1ull);
+    CHECK(entries[0].target == kNullUuid);
+    CHECK(entries[1].id != kNullUuid);
+    CHECK(entries[1].id != entries[0].id);
+    CHECK(entries[1].target == 0xaaull);
+    CHECK(entries[2].id == 0xc3ull);
+    CHECK(entries[2].id != entries[1].id);
+    CHECK(entries[2].target == kNullUuid);
+    CHECK(entries[3].id != kNullUuid);
+    CHECK(entries[3].id != entries[0].id);
+    CHECK(entries[3].id != entries[1].id);
+    CHECK(entries[3].id != entries[2].id);
+    CHECK(entries[3].target == kNullUuid);
+    CHECK(loaded.FindConstraintOwner(0xc1ull).GetUUID() == owner.GetUUID());
+    CHECK_FALSE(loaded.FindByUUID(0xbbull));
+
+    int target_warnings = 0;
+    for (const LoadReport::Entry& entry : report.entries)
+    {
+        if (entry.message.find("constraint target") != std::string::npos)
+            ++target_warnings;
+    }
+    CHECK(target_warnings == 1);
+
+    Scene again;
+    LoadReport second;
+    REQUIRE(ReadScene(WriteScene(loaded), again, second));
+    const Entity round = again.FindByUUID(0xaaull);
+    REQUIRE(round);
+    const auto& kept = round.Get<ConstraintStackComponent>().entries;
+    REQUIRE(kept.size() == 4);
+    CHECK(kept[0].id == entries[0].id);
+    CHECK(kept[1].id == entries[1].id);
+    CHECK(kept[1].target == 0xaaull);
+    CHECK(kept[2].id == entries[2].id);
+    CHECK(kept[2].target == kNullUuid);
+    CHECK(kept[3].id == entries[3].id);
+    CHECK(kept[3].target == kNullUuid);
+    CHECK(second.entries.empty());
 }
 
 TEST_CASE("empty slots survive a round trip with their values")
@@ -231,7 +324,9 @@ TEST_CASE("empty slots survive a round trip with their values")
 
     Scene loaded;
     LoadReport report;
+    const std::uint64_t library_before = loaded.mesh_library();
     REQUIRE(ReadScene(WriteScene(scene), loaded, report));
+    CHECK(loaded.mesh_library() != library_before);
     CHECK(report.entries.empty());
     const Entity again = loaded.FindByName("Cube");
     REQUIRE(again);

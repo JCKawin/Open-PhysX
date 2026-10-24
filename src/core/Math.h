@@ -80,6 +80,11 @@ inline Quat quat_normalize(Quat q)
     return {q.x * inv, q.y * inv, q.z * inv, q.w * inv};
 }
 
+inline Quat quat_conjugate(Quat q)
+{
+    return {-q.x, -q.y, -q.z, q.w};
+}
+
 inline Quat quat_mul(Quat a, Quat b)
 {
     return {

@@ -48,6 +48,8 @@ private:
     bool view_ticked_ = false;
     bool euler_active_ = false;
     Vec3 euler_cache_{};
+    bool cursor_euler_active_ = false;
+    Vec3 cursor_euler_cache_{};
     EditSnapshot edit_before_{};
     Editor editor_{};
     FileSession files_{};

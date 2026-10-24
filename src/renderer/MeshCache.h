@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
 
 namespace openphysx {
 
@@ -21,6 +22,9 @@ public:
     MeshCache& operator=(const MeshCache&) = delete;
 
     void clear();
+    // Unloads one uploaded model. A removed CPU mesh must not stay on the GPU.
+    void drop(uint32_t mesh_id);
+    std::vector<uint32_t> ids() const;
 
     // Retrieves or uploads a raylib Model for the given mesh.
     // If the cached revision differs from mesh_revision, re-uploads.

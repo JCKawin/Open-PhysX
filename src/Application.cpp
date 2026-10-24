@@ -11,7 +11,6 @@ namespace {
 constexpr int kWindowWidth = 1600;
 constexpr int kWindowHeight = 900;
 constexpr int kTargetFps = 60;
-constexpr float kFixedDt = 1.0f / 60.0f;
 
 } // namespace
 
@@ -66,13 +65,7 @@ void Application::shutdown()
 
 void Application::frame()
 {
-    const float dt = GetFrameTime();
-    accumulator_ += dt;
-    while (accumulator_ >= kFixedDt)
-    {
-        simulation_.step(kFixedDt);
-        accumulator_ -= kFixedDt;
-    }
+    simulation_.step(GetFrameTime());
 
     BeginDrawing();
     ClearBackground(Color{20, 20, 22, 255});
