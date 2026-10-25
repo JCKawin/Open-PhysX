@@ -1,13 +1,140 @@
-.idea/
-.vs/
-.vscode/
-cmake-build-*/
-build/
-out/
+# ===========================================================================
+# Open-PhysX .gitignore
+#
+# NOTE: do not add a blanket ".*" rule here. It would hide .gitattributes
+# (Git LFS), .github/ workflows and other dotfiles that belong in the repo.
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# OS / editor noise
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+*#
+TAGS
+tags
+
+# IDEs and local tool settings
+/.idea/
+/.vscode/
+/.vs/
+/.cache/
+CMakeLists.txt.user
+CMakeSettings.json
 CMakeUserPresets.json
-imgui.ini
-*.user
-blender/
-OpenPhysX_Agent_Instructions.md
-Import-export/
-*.opx
+
+# ---------------------------------------------------------------------------
+# Build output
+# ---------------------------------------------------------------------------
+
+# Out-of-source build directories (build-gcc/, build-debug/, cmake-build-*, ...)
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/install/
+
+# CMake / Ninja artifacts from accidental in-source configuration
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+CMakeScripts/
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+
+# Compiler / linker artifacts that end up in-source.
+# NOTE: *.obj is intentionally NOT ignored: Wavefront OBJ mesh test data
+# lives in tests/files/io_tests/obj/. MSVC objects only appear inside the
+# ignored build directories.
+*.o
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.exe
+*.dll
+*.pyd
+*.pdb
+*.ilk
+*.exp
+
+# ---------------------------------------------------------------------------
+# Generated files
+# ---------------------------------------------------------------------------
+
+# Smoke simulation noise tile (generated at build time)
+waveletNoiseTile.bin
+
+# Blender temporary / backup files
+blendcache_*
+*.blend[1-9]
+
+# Test & coverage output
+/Testing/
+/tests/data/
+*.gcda
+*.gcno
+*.gcov
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# In-source doc generation
+/doc/doxygen/html/
+/doc/python_api/sphinx-in-tmp/
+/doc/python_api/sphinx-in/
+/doc/python_api/sphinx-out/
+/doc/python_api/stubs/
+/doc/python_api/rst/bmesh.ops.rst
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+
+# ---------------------------------------------------------------------------
+# Local / user-specific files
+# ---------------------------------------------------------------------------
+/blender.bin
+/BUILD_NOTES.txt
+/*.patch
+/*.diff
+/locale/user-config.py
+
+# In-source lib downloads and staging
+/build_files/build_environment/downloads/
+/build_files/build_environment/windows/build/
+
+# In-source buildbot signing configuration
+/build_files/buildbot/codesign/config_server.py
+
+# ---------------------------------------------------------------------------
+# External repositories & prebuilt dependencies (not part of this repo)
+# ---------------------------------------------------------------------------
+/scripts/addons/
+/scripts/addons_contrib/
+/tests/benchmarks/
+/release/scripts/addons/
+/release/scripts/addons_contrib/
+/release/datafiles/locale/
+/release/datafiles/assets/
+/source/tools/
+
+# Prebuilt library checkouts declared in .gitmodules, populated by
+# "make update" / "git submodule update --init". Never committed here.
+/lib/linux_x64/
+/lib/macos_arm64/
+/lib/windows_x64/
+/lib/windows_arm64/

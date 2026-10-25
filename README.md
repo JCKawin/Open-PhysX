@@ -1,36 +1,41 @@
-# Open PhysX
+<!--
+Keep this document short & concise,
+linking to external resources instead of including content in-line.
+See 'release/text/readme.html' for the end user read-me.
+-->
 
-An open GPL-3 3D physics **workstation** (early scaffold). Not NVIDIA PhysX.
+Open-PhysX
+==========
 
-Right now the binary is a dockable editor: raylib 6.0 window, Dear ImGui chrome, one cube on a grid, a playback clock, and a fixed `1/60 s` step. The useful part is the split — `ISimulation` has no GPU or UI types — which is the seam for a real solver and for running the same core on desktop, web, and headless machines.
+Open-PhysX is a physics workstation and simulator built on the Blender source tree.
+The application name, window title, executable, and user config directory are Open-PhysX.
+This is not NVIDIA PhysX.
 
-## Docs
+The code is free and open source under the GNU General Public License, Version 3.
+It is derived from Blender. Copyright notices that name the Blender Authors or the
+Blender Foundation stay in place. Internal module paths (`source/blender`), the
+`blender` namespace, `bpy`, and the `.blend` file format keep their names so the
+tree still builds and still opens Blender files.
 
-Start at **[docs/README.md](docs/README.md)**.
+Project Pages
+-------------
 
-| Topic | Markdown | Draw.io |
-| --- | --- | --- |
-| What the code is | [docs/architecture.md](docs/architecture.md) | [01](docs/diagrams/01-system-architecture.drawio), [02](docs/diagrams/02-runtime-loop.drawio) |
-| Build graph | (see architecture + portability) | [03](docs/diagrams/03-build-graph.drawio) |
-| Run everywhere | [docs/portability.md](docs/portability.md) | [04](docs/diagrams/04-portability.drawio) |
-| Use all the hardware | [docs/hardware.md](docs/hardware.md) | [05](docs/diagrams/05-hardware.drawio) |
-| How to keep this set honest | [docs/maintenance.md](docs/maintenance.md) | [00](docs/diagrams/00-doc-map.drawio) |
+- [Main Website](https://www.blender.org)
+- [Reference Manual](https://docs.blender.org/manual/en/latest/index.html)
+- [User Community](https://www.blender.org/community/)
 
-Open the `.drawio` files in [diagrams.net](https://app.diagrams.net/) or a draw.io editor plugin. GitHub will render the mermaid sketches inside the markdown.
+Development
+-----------
 
-## Build
+- [Build Instructions](https://developer.blender.org/docs/handbook/building_blender/)
+- [Code Review & Bug Tracker](https://projects.blender.org)
+- [Developer Forum](https://devtalk.blender.org)
+- [Developer Documentation](https://developer.blender.org/docs/)
 
-Needs CMake ≥ 3.25, a C++20 compiler, and an OpenGL 3.3-class GPU. First configure downloads raylib and rlImGui (ImGui is already under `external/imgui`).
 
-```bash
-cmake -S . -B build
-cmake --build build
-```
+License
+-------
 
-The executable is `Open_PhysX` (`Open_PhysX.exe` on Windows).
-
-Viewport: RMB orbit, Shift+RMB pan, Ctrl+RMB zoom, wheel zoom. Numpad 1/3/7 snap the view, Numpad 5 toggles orthographic, Home frames the cube. `G` / `R` / `S` move, rotate, and scale. `Ctrl+Z` undoes. `Ctrl+N` resets the simulation, `Ctrl+Q` quits. Settings → Mouse can switch orbit to the middle button.
-
-## License
-
-[GPL-3.0](LICENSE).
+Open-PhysX as a whole is licensed under the GNU General Public License, Version 3.
+Individual files may have a different but compatible license. The upstream license
+notes are at [blender.org/about/license](https://www.blender.org/about/license).
