@@ -1511,6 +1511,20 @@ function(windows_install_shared_manifest)
     "${multiValueArgs}"
     ${ARGN}
   )
+  # MinGW links the UCRT64 system libraries. LIBDIR is unset, so these paths
+  # become "/epoxy/..." and `ninja install` stops. Skip files that are not there.
+  if(MINGW)
+    set(_existing_files)
+    foreach(_file IN LISTS WINDOWS_INSTALL_FILES)
+      if(EXISTS "${_file}")
+        list(APPEND _existing_files "${_file}")
+      endif()
+    endforeach()
+    if(NOT _existing_files)
+      return()
+    endif()
+    set(WINDOWS_INSTALL_FILES "${_existing_files}")
+  endif()
   # If none of the options are set assume ALL.
   unset(WINDOWS_CONFIGURATIONS)
   if(NOT WINDOWS_INSTALL_ALL AND

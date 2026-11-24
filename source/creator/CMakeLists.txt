@@ -373,6 +373,8 @@ else()
     target_compile_definitions(blender-launcher PRIVATE -D_UNICODE -DUNICODE)
     target_include_directories(blender-launcher PRIVATE ${CMAKE_SOURCE_DIR}/source/blender/blenlib)
     if(MINGW)
+      # -mwindows looks for WinMain. This file defines wWinMain, so the Unicode startup is required.
+      target_link_options(blender-launcher PRIVATE -municode)
       target_link_libraries(blender-launcher pathcch)
     else()
       target_link_libraries(blender-launcher Pathcch.lib)
@@ -739,16 +741,21 @@ if(WIN32)
       ALL
     )
   endif()
-  install(
-    DIRECTORY ${LIBDIR}/opencolorio/lib/site-packages-debug/PyOpenColorIO
-    DESTINATION ${TARGETDIR_SITE_PACKAGES}
-    CONFIGURATIONS Debug
-  )
-  install(
-    DIRECTORY ${LIBDIR}/opencolorio/lib/site-packages/PyOpenColorIO
-    DESTINATION ${TARGETDIR_SITE_PACKAGES}
-    CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
-  )
+  # Precompiled LIBDIR only. A system OpenColorIO has no bundled PyOpenColorIO tree.
+  if(EXISTS ${LIBDIR}/opencolorio/lib/site-packages-debug/PyOpenColorIO)
+    install(
+      DIRECTORY ${LIBDIR}/opencolorio/lib/site-packages-debug/PyOpenColorIO
+      DESTINATION ${TARGETDIR_SITE_PACKAGES}
+      CONFIGURATIONS Debug
+    )
+  endif()
+  if(EXISTS ${LIBDIR}/opencolorio/lib/site-packages/PyOpenColorIO)
+    install(
+      DIRECTORY ${LIBDIR}/opencolorio/lib/site-packages/PyOpenColorIO
+      DESTINATION ${TARGETDIR_SITE_PACKAGES}
+      CONFIGURATIONS Release;RelWithDebInfo;MinSizeRel
+    )
+  endif()
   if(EXISTS ${LIBDIR}/OpenImageDenoise/bin/openimagedenoise.dll) # 4.0
     windows_install_shared_manifest(
       FILES
@@ -1238,7 +1245,8 @@ elseif(WIN32)
     DEBUG
   )
 
-  if(WITH_WINDOWS_RELEASE_PDB)
+  # GNU ld does not write the MSVC PDB this rule copies.
+  if(MSVC AND WITH_WINDOWS_RELEASE_PDB)
     if(MSVC_CLANG AND WITH_WINDOWS_RELEASE_STRIPPED_PDB)
       # clang-cl doesn't support stripped pdbs yet, it takes the /PDBSTRIPPED argument
       # without errors, but will just proceed to not do anything with it. So for now
