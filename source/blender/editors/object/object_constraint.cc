@@ -2504,7 +2504,11 @@ static const EnumPropertyItem *object_constraint_add_itemf(bContext * /*C*/,
   int totitem = 0;
 
   while (item->identifier) {
-    if (!ELEM(item->value, CONSTRAINT_TYPE_KINEMATIC, CONSTRAINT_TYPE_SPLINEIK)) {
+    if (!ELEM(item->value,
+              CONSTRAINT_TYPE_KINEMATIC,
+              CONSTRAINT_TYPE_SPLINEIK,
+              CONSTRAINT_TYPE_TRANSFORM_CACHE))
+    {
       RNA_enum_item_add(&object_constraint_items, &totitem, item);
     }
     item++;
@@ -2570,6 +2574,28 @@ void OBJECT_OT_constraint_add_with_targets(wmOperatorType *ot)
   ot->prop = prop;
 }
 
+static const EnumPropertyItem *pose_constraint_add_itemf(bContext * /*C*/,
+                                                         PointerRNA * /*ptr*/,
+                                                         PropertyRNA * /*prop*/,
+                                                         bool *r_free)
+{
+  const EnumPropertyItem *item = rna_enum_constraint_type_items;
+  EnumPropertyItem *pose_constraint_items = nullptr;
+  int totitem = 0;
+
+  while (item->identifier) {
+    if (item->value != CONSTRAINT_TYPE_TRANSFORM_CACHE) {
+      RNA_enum_item_add(&pose_constraint_items, &totitem, item);
+    }
+    item++;
+  }
+
+  RNA_enum_item_end(&pose_constraint_items, &totitem);
+  *r_free = true;
+
+  return pose_constraint_items;
+}
+
 void POSE_OT_constraint_add(wmOperatorType *ot)
 {
   /* identifiers */
@@ -2586,7 +2612,9 @@ void POSE_OT_constraint_add(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* properties */
-  ot->prop = RNA_def_enum(ot->srna, "type", rna_enum_constraint_type_items, 1, "Type", "");
+  PropertyRNA *prop = RNA_def_enum(ot->srna, "type", rna_enum_dummy_NULL_items, 1, "Type", "");
+  RNA_def_enum_funcs(prop, pose_constraint_add_itemf);
+  ot->prop = prop;
 }
 
 void POSE_OT_constraint_add_with_targets(wmOperatorType *ot)
@@ -2607,7 +2635,9 @@ void POSE_OT_constraint_add_with_targets(wmOperatorType *ot)
   ot->flag = OPTYPE_REGISTER | OPTYPE_UNDO;
 
   /* properties */
-  ot->prop = RNA_def_enum(ot->srna, "type", rna_enum_constraint_type_items, 1, "Type", "");
+  PropertyRNA *prop = RNA_def_enum(ot->srna, "type", rna_enum_dummy_NULL_items, 1, "Type", "");
+  RNA_def_enum_funcs(prop, pose_constraint_add_itemf);
+  ot->prop = prop;
 }
 
 /** \} */

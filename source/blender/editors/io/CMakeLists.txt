@@ -4,14 +4,12 @@
 
 set(INC
   ../include
-  ../../io/alembic
   ../../io/common
   ../../io/fbx
   ../../io/grease_pencil
   ../../io/ply
   ../../io/spz
   ../../io/stl
-  ../../io/usd
   ../../io/wavefront_obj
   ../../makesrna
   ${CMAKE_BINARY_DIR}/source/blender/makesrna
@@ -21,7 +19,6 @@ set(INC_SYS
 )
 
 set(SRC
-  io_alembic.cc
   io_cache.cc
   io_drop_import_file.cc
   io_fbx_ops.cc
@@ -31,10 +28,8 @@ set(SRC
   io_ply_ops.cc
   io_spz_ops.cc
   io_stl_ops.cc
-  io_usd.cc
   io_utils.cc
 
-  io_alembic.hh
   io_cache.hh
   io_drop_import_file.hh
   io_fbx_ops.hh
@@ -44,7 +39,6 @@ set(SRC
   io_ply_ops.hh
   io_spz_ops.hh
   io_stl_ops.hh
-  io_usd.hh
   io_utils.hh
 )
 
@@ -100,21 +94,6 @@ if(WITH_IO_GREASE_PENCIL)
     bf_io_grease_pencil
   )
   add_definitions(-DWITH_IO_GREASE_PENCIL)
-endif()
-
-if(WITH_ALEMBIC)
-  list(APPEND LIB
-    bf_io_alembic
-  )
-  add_definitions(-DWITH_ALEMBIC)
-endif()
-
-if(WITH_USD)
-  list(APPEND LIB
-    bf_io_usd
-    PRIVATE bf::dependencies::optional::usd
-  )
-  add_definitions(-DWITH_USD)
 endif()
 
 if(WITH_PUGIXML)

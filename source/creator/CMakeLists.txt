@@ -4,7 +4,6 @@
 
 set(INC
   ../blender/editors/include
-  ../blender/io/usd
   ../blender/makesrna
 )
 

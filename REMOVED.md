@@ -85,3 +85,15 @@ Deleted `source/blender/freestyle/` and `scripts/freestyle/` (style modules). Ab
 DNA and the view-layer data helpers stay. `FreestyleLineStyle` is still an ID, and `layer.cc` still inits, copies, and frees `view_layer->freestyle_config` through `BKE_freestyle_*` in `blenkernel/intern/freestyle.cc`. That is load/save bookkeeping, not the stroke renderer. Line-style RNA stays so old files do not drop the ID. UI panels already hide themselves when `bpy.app.build_options.freestyle` is false. Mesh mark operators stay behind `#ifdef WITH_FREESTYLE` and are not compiled.
 
 Rebuild: 198 Ninja steps, 230 seconds. `open-physx.exe` linked.
+
+## USD and Alembic
+
+Deleted `source/blender/io/usd/`, `source/blender/io/alembic/`, and the import/export operators `editors/io/io_usd.cc` and `editors/io/io_alembic.cc`. About 42,600 lines (200 files in the commit, 35 insertions).
+
+`WITH_USD` and `WITH_ALEMBIC` stay off. Those trees are no longer CMake subdirectories. Unconditional include paths that pointed at them were removed from `editors/io/CMakeLists.txt`, `makesrna/intern/CMakeLists.txt` (`../../io/usd`), and `source/creator/CMakeLists.txt`. `WM_OT_usd_*` and `WM_OT_alembic_*` are no longer registered. The top bar already hid those entries when `bpy.app.build_options.usd` and `.alembic` are false.
+
+Cache modifier and constraint DNA stay so old files still load. `MeshSeqCacheModifierData` and `bTransformCacheConstraint` are still in DNA, and their type-info slots still copy and free the `CacheFile` pointer. With the readers gone, evaluate is a no-op (the read calls were already inside `#ifdef WITH_USD` / `WITH_ALEMBIC`). Mesh Sequence Cache is marked `eModifierTypeFlag_NoUserAdd` and dropped from the modifier add menu. Transform Cache is filtered out of the object and pose constraint add menus. The older Mesh Cache modifier (MDD/PC2) is unrelated and stays. `CacheFile` operators stay so a loaded cache datablock can still be freed.
+
+Hydra's CMake file still names `bf_io_usd`, and `WITH_HYDRA` stays off because it depends on USD. `rna_usd.cc` stays on disk and is not compiled.
+
+Rebuild: 215 Ninja steps, 48 seconds. `open-physx.exe` linked. The previous Freestyle rebuild was 230 seconds; this one is shorter because ccache covered the makesrna regeneration.

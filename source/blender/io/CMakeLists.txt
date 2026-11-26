@@ -29,11 +29,3 @@ endif()
 if(WITH_IO_FBX)
   add_subdirectory(fbx)
 endif()
-
-if(WITH_ALEMBIC)
-  add_subdirectory(alembic)
-endif()
-
-if(WITH_USD)
-  add_subdirectory(usd)
-endif()

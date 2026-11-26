@@ -10,14 +10,6 @@
 
 #include "WM_api.hh"
 
-#ifdef WITH_ALEMBIC
-#  include "io_alembic.hh"
-#endif
-
-#ifdef WITH_USD
-#  include "io_usd.hh"
-#endif
-
 #ifdef WITH_IO_FBX
 #  include "io_fbx_ops.hh"
 #endif
@@ -34,17 +26,6 @@ namespace blender {
 
 void ED_operatortypes_io()
 {
-#ifdef WITH_ALEMBIC
-  WM_operatortype_append(WM_OT_alembic_import);
-  WM_operatortype_append(WM_OT_alembic_export);
-  ed::io::alembic_file_handler_add();
-#endif
-#ifdef WITH_USD
-  WM_operatortype_append(WM_OT_usd_import);
-  WM_operatortype_append(WM_OT_usd_export);
-  ed::io::usd_file_handler_add();
-#endif
-
 #ifdef WITH_IO_GREASE_PENCIL
   WM_operatortype_append(WM_OT_grease_pencil_import_svg);
   ed::io::grease_pencil_file_handler_add();

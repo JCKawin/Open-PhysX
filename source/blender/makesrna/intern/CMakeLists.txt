@@ -254,7 +254,6 @@ set(INC
   ../../ikplugin
   ../../imbuf
   ../../imbuf/movie
-  ../../io/usd
   ../../makesdna/intern
   ../../modifiers
   ../../nodes
