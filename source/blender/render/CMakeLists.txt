@@ -79,16 +79,6 @@ if(WITH_PYTHON)
   )
 endif()
 
-if(WITH_FREESTYLE)
-  list(APPEND INC
-    ../freestyle
-  )
-  list(APPEND LIB
-    bf_freestyle
-  )
-  add_definitions(-DWITH_FREESTYLE)
-endif()
-
 if(WITH_HYDRA)
   add_subdirectory(hydra)
 endif()

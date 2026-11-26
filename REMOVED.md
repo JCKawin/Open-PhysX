@@ -75,3 +75,13 @@ CMake references removed, all of them already behind `if(WITH_CYCLES)` except on
 `#include "CCL_api.h"` stays inside `#ifdef WITH_CYCLES` in `creator.cc`, `bpy_interface.cc`, and `render_texture_cache.cc`. The option `WITH_CYCLES` still exists and is off. Turning it on will not configure until the sources are restored.
 
 Rebuild after the deletion: 196 Ninja steps, 33 seconds, `open-physx.exe` linked. The same smoke test passed again.
+
+## Freestyle
+
+Deleted `source/blender/freestyle/` and `scripts/freestyle/` (style modules). About 94,000 lines.
+
+`WITH_FREESTYLE` stays off. The renderer is no longer a CMake subdirectory and is not linked. Render-pipeline hooks are gone: `RE_RenderFreestyleStrokes`, `RE_RenderFreestyleExternal`, the post-render call in `engine.cc`, `FRS_init` / `FRS_exit`, and the preview-result exception that freed the result whenever the Freestyle edge flag was set.
+
+DNA and the view-layer data helpers stay. `FreestyleLineStyle` is still an ID, and `layer.cc` still inits, copies, and frees `view_layer->freestyle_config` through `BKE_freestyle_*` in `blenkernel/intern/freestyle.cc`. That is load/save bookkeeping, not the stroke renderer. Line-style RNA stays so old files do not drop the ID. UI panels already hide themselves when `bpy.app.build_options.freestyle` is false. Mesh mark operators stay behind `#ifdef WITH_FREESTYLE` and are not compiled.
+
+Rebuild: 198 Ninja steps, 230 seconds. `open-physx.exe` linked.

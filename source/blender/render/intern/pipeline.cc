@@ -89,9 +89,6 @@
 #include "GPU_context.hh"
 #include "WM_api.hh"
 
-#ifdef WITH_FREESTYLE
-#  include "FRS_freestyle.h"
-#endif
 
 /* internal */
 #include "pipeline.hh"
@@ -563,11 +560,6 @@ void RE_FreeAllRender()
   }
 
   RE_FreeInteractiveCompositorRenders();
-
-#ifdef WITH_FREESTYLE
-  /* finalize Freestyle */
-  FRS_exit();
-#endif
 }
 
 void RE_FreeInteractiveCompositorRenders()
@@ -794,8 +786,6 @@ void RE_InitState(Render *re,
                   int winy,
                   const rcti *disprect)
 {
-  bool had_freestyle = (re->r.mode & R_EDGE_FRS) != 0;
-
   re->ok = true; /* maybe flag */
 
   re->i.starttime = BLI_time_now_seconds();
@@ -844,12 +834,7 @@ void RE_InitState(Render *re,
   BLI_rw_mutex_lock(&re->resultmutex, THREAD_LOCK_WRITE);
 
   if (re->r.scemode & R_BUTS_PREVIEW) {
-    if (had_freestyle || (re->r.mode & R_EDGE_FRS)) {
-      /* freestyle manipulates render layers so always have to free */
-      render_result_free(re->result);
-      re->result = nullptr;
-    }
-    else if (re->result) {
+    if (re->result) {
       bool have_layer = false;
 
       if (re->single_view_layer[0] == '\0' && re->result->layers.first()) {
@@ -2096,71 +2081,6 @@ void RE_RenderFrame(Render *re,
   /* UGLY WARNING */
   G.is_rendering = false;
 }
-
-#ifdef WITH_FREESTYLE
-
-/* Not freestyle specific, currently only used by free-style. */
-static void change_renderdata_engine(Render *re, const char *new_engine)
-{
-  if (!STREQ(re->r.engine, new_engine)) {
-    if (re->engine) {
-      RE_engine_free(re->engine);
-      re->engine = nullptr;
-    }
-    STRNCPY(re->r.engine, new_engine);
-  }
-}
-
-static bool use_eevee_for_freestyle_render(Render *re)
-{
-  RenderEngineType *type = RE_engines_find(re->r.engine);
-  return !(type->flag & RE_USE_CUSTOM_FREESTYLE);
-}
-
-void RE_RenderFreestyleStrokes(Render *re, Main *bmain, Scene *scene, const bool render)
-{
-  if (render_init_from_main(re, &scene->r, bmain, scene, nullptr, nullptr, false, false)) {
-    if (render) {
-      char scene_engine[32];
-      STRNCPY(scene_engine, re->r.engine);
-      if (use_eevee_for_freestyle_render(re)) {
-        change_renderdata_engine(re, RE_engine_id_BLENDER_EEVEE);
-      }
-
-      RE_engine_render(re, false);
-
-      change_renderdata_engine(re, scene_engine);
-    }
-  }
-}
-
-void RE_RenderFreestyleExternal(Render *re)
-{
-  if (re->display->test_break()) {
-    return;
-  }
-
-  FRS_init_stroke_renderer(re);
-
-  for (RenderView &rv : re->result->views) {
-    RE_SetActiveRenderView(re, rv.name);
-
-    FRS_begin_stroke_rendering(re);
-
-    for (ViewLayer &view_layer : re->scene->view_layers) {
-      if ((re->r.scemode & R_SINGLE_LAYER) && !STREQ(view_layer.name, re->single_view_layer)) {
-        continue;
-      }
-
-      if (FRS_is_freestyle_enabled(&view_layer)) {
-        FRS_do_stroke_rendering(re, &view_layer);
-      }
-    }
-
-    FRS_end_stroke_rendering(re);
-  }
-}
-#endif
 
 /** \} */
 

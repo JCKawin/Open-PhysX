@@ -796,10 +796,6 @@ static const EnumPropertyItem eevee_resolution_scale_items[] = {
 #  include "SEQ_sequencer.hh"
 #  include "SEQ_sound.hh"
 
-#  ifdef WITH_FREESTYLE
-#    include "FRS_freestyle.h"
-#  endif
-
 #  ifdef WITH_ALEMBIC
 #    include "ABC_alembic.h"
 #  endif
@@ -2015,9 +2011,6 @@ void rna_Scene_compositor_update(Main * /*bmain*/, Scene * /*scene*/, PointerRNA
 
 void rna_Scene_use_view_map_cache_update(Main * /*bmain*/, Scene * /*scene*/, PointerRNA * /*ptr*/)
 {
-#  ifdef WITH_FREESTYLE
-  FRS_free_view_map_cache();
-#  endif
 }
 
 void rna_ViewLayer_name_set(PointerRNA *ptr, const char *value)

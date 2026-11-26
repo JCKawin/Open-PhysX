@@ -85,10 +85,6 @@
 #  include "GPU_compilation_subprocess.hh"
 #endif
 
-#ifdef WITH_FREESTYLE
-#  include "FRS_freestyle.h"
-#endif
-
 #include <csignal>
 
 #ifdef __FreeBSD__
@@ -617,12 +613,6 @@ int main(int argc,
           "WARNING: Blender compiled without Python!\n"
           "This is not intended for typical usage.\n"
           "\n");
-#endif
-
-#ifdef WITH_FREESTYLE
-  /* Initialize Freestyle. */
-  FRS_init();
-  FRS_set_context(C);
 #endif
 
 /* OK we are ready for it. */

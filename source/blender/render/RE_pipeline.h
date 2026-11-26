@@ -385,14 +385,6 @@ void RE_RenderAnim(struct Render *re,
                    int sfra,
                    int efra,
                    int tfra);
-#ifdef WITH_FREESTYLE
-void RE_RenderFreestyleStrokes(struct Render *re,
-                               struct Main *bmain,
-                               struct Scene *scene,
-                               bool render);
-void RE_RenderFreestyleExternal(struct Render *re);
-#endif
-
 void RE_SetActiveRenderView(struct Render *re, const char *viewname);
 const char *RE_GetActiveRenderView(struct Render *re);
 

@@ -210,12 +210,6 @@ if(WITH_EMBREE)
   add_definitions(-DWITH_EMBREE)
 endif()
 
-if(WITH_FREESTYLE)
-  list(APPEND INC
-    ../../freestyle/intern/python
-  )
-  add_definitions(-DWITH_FREESTYLE)
-endif()
 
 if(WITH_IMAGE_CINEON)
   add_definitions(-DWITH_IMAGE_CINEON)
