@@ -2,13 +2,30 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
+import os
+
 import bpy
 from bpy.types import Header, Menu, Panel
+from bpy.utils import previews
 
 from bpy.app.translations import (
     pgettext_iface as iface_,
     contexts as i18n_contexts,
 )
+
+_logo_previews = None
+
+
+def openphysx_logo_icon_id():
+    """Icon id for the Open-PhysX mark, or 0 when the image is missing."""
+    global _logo_previews
+    if _logo_previews is None:
+        _logo_previews = previews.new()
+        logo_path = os.path.join(os.path.dirname(__file__), "openphysx_logo.png")
+        if os.path.exists(logo_path):
+            _logo_previews.load("logo", logo_path, 'IMAGE')
+    logo = _logo_previews.get("logo") if _logo_previews else None
+    return logo.icon_id if logo else 0
 
 
 class TOPBAR_HT_upper_bar(Header):
@@ -112,7 +129,11 @@ class TOPBAR_MT_editor_menus(Menu):
 
         # Allow calling this menu directly (this might not be a header area).
         if getattr(context.area, "show_menus", False):
-            layout.menu("TOPBAR_MT_blender", text="", icon='BLENDER')
+            logo_id = openphysx_logo_icon_id()
+            if logo_id:
+                layout.menu("TOPBAR_MT_blender", text="", icon_value=logo_id)
+            else:
+                layout.menu("TOPBAR_MT_blender", text="", icon='BLENDER')
         else:
             layout.menu("TOPBAR_MT_blender", text="Open-PhysX")
 
@@ -134,7 +155,6 @@ class TOPBAR_MT_blender(Menu):
     def draw(self, _context):
         layout = self.layout
 
-        layout.operator("wm.splash")
         layout.operator("wm.splash_about")
 
         layout.separator()

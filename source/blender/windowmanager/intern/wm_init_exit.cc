@@ -386,35 +386,10 @@ void WM_init(bContext *C, int argc, const char **argv)
   wm_homefile_read_post(C, params_file_read_post);
 }
 
-static bool wm_init_splash_show_on_startup_check()
-{
-  if (U.uiflag & USER_SPLASH_DISABLE) {
-    return false;
-  }
-
-  bool use_splash = false;
-
-  const char *blendfile_path = BKE_main_blendfile_path_from_global();
-  if (blendfile_path[0] == '\0') {
-    /* Common case, no file is loaded, show the splash. */
-    use_splash = true;
-  }
-  else {
-    /* A less common case, if there is no user preferences, show the splash screen
-     * so the user has the opportunity to restore settings from a previous version. */
-    use_splash = !bke::preferences::exists();
-  }
-
-  return use_splash;
-}
-
 void WM_init_splash_on_startup(bContext *C)
 {
-  if (!wm_init_splash_show_on_startup_check()) {
-    return;
-  }
-
-  WM_init_splash(C);
+  /* Open-PhysX starts in the default scene. The splash is not shown. */
+  UNUSED_VARS(C);
 }
 
 void WM_init_splash(bContext *C)
