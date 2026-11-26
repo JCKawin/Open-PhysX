@@ -8,12 +8,7 @@ set(INC
   include
   ../intern
   ../../editors/include
-  ../../compositor
   ../../makesrna
-  ../../compositor/algorithms
-  ../../compositor/cached_resources
-  ../../compositor/derived_resources
-  ../../compositor/utilities
   ../../modifiers
   ../../io/common
   ../../io/csv
@@ -354,7 +349,6 @@ set(LIB
   PRIVATE bf::imbuf::movie
   PRIVATE bf::intern::guardedalloc
   bf_nodes
-  bf_compositor
   bf_io_common
   bf_io_csv
   PRIVATE bf::intern::atomic

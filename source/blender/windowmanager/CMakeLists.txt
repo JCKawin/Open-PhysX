@@ -6,7 +6,6 @@ set(INC
   PUBLIC .
   gizmo
   gizmo/intern
-  ../compositor
   ../editors/include
   ../editors/interface
   ../gpu
@@ -113,7 +112,6 @@ set(LIB
   PRIVATE bf::render
   PRIVATE bf::sequencer
   bf_intern_ghost
-  bf_compositor
   PRIVATE bf::dependencies::optional::ffmpeg
   PRIVATE bf::dependencies::optional::audaspace
 )

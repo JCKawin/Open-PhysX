@@ -28,7 +28,7 @@
 #include "BLT_translation.hh"
 
 #include "BKE_camera.h"
-#include "BKE_compositor.hh"
+
 #include "BKE_context.hh"
 #include "BKE_curve.hh"
 #include "BKE_curves.h"
@@ -97,7 +97,6 @@
 /* only for callbacks */
 #include "draw_cache_impl.hh"
 
-#include "engines/compositor/compositor_engine.h"
 #include "engines/eevee/eevee_engine.h"
 #include "engines/external/external_engine.h"
 #include "engines/gpencil/gpencil_engine.hh"
@@ -1463,8 +1462,6 @@ void DRWContext::enable_engines(bool gpencil_engine_needed, RenderEngineType *re
       view_data.grease_pencil.set_used(gpencil_engine_needed);
     }
 
-    view_data.compositor.set_used(is_viewport_compositor_used());
-
     view_data.overlay.set_used(true);
 
 #ifdef WITH_DRAW_DEBUG
@@ -2460,12 +2457,7 @@ bool DRWContext::is_transforming() const
 
 bool DRWContext::is_viewport_compositor_used() const
 {
-  if (!this->v3d || !this->rv3d) {
-    return false;
-  }
-
-  return bke::compositor::is_viewport_compositor_enabled(*this->v3d, *this->rv3d) &&
-         bke::compositor::is_enabled(*this->scene, bke::compositor::ExecutionMode::Preview);
+  return false;
 }
 
 /** \} */

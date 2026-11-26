@@ -62,9 +62,6 @@
 
 #include "NOD_composite.hh"
 
-#include "COM_node_group_operation.hh"
-#include "COM_render_context.hh"
-
 #include "DEG_depsgraph.hh"
 #include "DEG_depsgraph_build.hh"
 #include "DEG_depsgraph_debug.hh"
@@ -595,10 +592,7 @@ void RE_FreeAllPersistentData()
 
 static void re_gpu_texture_caches_free(Render *re)
 {
-  /* Free persistent compositor that may be using these textures. */
-  if (re->compositor) {
-    RE_compositor_free(*re);
-  }
+  RE_compositor_free(*re);
 
   /* Free textures. */
   if (re->result_has_gpu_texture_caches) {
@@ -1284,8 +1278,6 @@ static bool scene_has_any_compositor_output(const Scene &scene)
  * The result will be output into a compositing render layer in the render result. */
 static void do_render_compositor(Render *re)
 {
-  bool update_newframe = false;
-
   VectorSet<Scene *> needed_scenes_to_render = get_scenes_that_needs_render_by_compositor(
       *re->pipeline_scene_eval);
 
@@ -1315,9 +1307,6 @@ static void do_render_compositor(Render *re)
 
     BLI_rw_mutex_unlock(&re->resultmutex);
 
-    /* Scene render process already updates animsys. */
-    update_newframe = true;
-
     /* The compositor does not have a group output, skip writing the render result. See
      * R_SKIP_WRITE for more information. */
     if (!scene_has_compositor_output(*re->pipeline_scene_eval)) {
@@ -1339,39 +1328,6 @@ static void do_render_compositor(Render *re)
       /* checks if there are render-result nodes that need scene */
       if ((re->r.scemode & R_SINGLE_LAYER) == 0) {
         do_render_compositor_scenes(re, needed_scenes_to_render);
-      }
-
-      if (!re->display->test_break()) {
-        if (update_newframe) {
-          /* If we have consistent depsgraph now would be a time to update them. */
-        }
-
-        compositor::SideEffectOutputTypes needed_side_effects_outputs =
-            compositor::SideEffectOutputTypes::FileOutputNode;
-        if (!G.background) {
-          needed_side_effects_outputs |= compositor::SideEffectOutputTypes::ViewerNode |
-                                         compositor::SideEffectOutputTypes::NodePreviews;
-        }
-
-        CLOG_STR_INFO(&LOG, "Executing compositor");
-
-        re->i.infostr = IFACE_("Compositing");
-        re->display->stats_draw(&re->i);
-        re->i.infostr = nullptr;
-
-        compositor::RenderContext compositor_render_context;
-        compositor_render_context.is_animation_render = re->flag & R_ANIMATION;
-        for (RenderView &rv : re->result->views) {
-          RE_compositor_execute(render::CompositorInputData(*re,
-                                                            *re->main,
-                                                            *re->pipeline_scene_eval,
-                                                            re->r,
-                                                            rv.name,
-                                                            &compositor_render_context,
-                                                            needed_side_effects_outputs,
-                                                            false));
-        }
-        compositor_render_context.save_file_outputs(re->pipeline_scene_eval);
       }
     }
   }

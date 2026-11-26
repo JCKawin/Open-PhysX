@@ -32,9 +32,6 @@
 
 #include "WM_api.hh"
 
-#include "COM_node_operation.hh"
-#include "COM_result.hh"
-#include "COM_utilities.hh"
 
 namespace blender {
 
@@ -59,8 +56,7 @@ static void node_declare(nodes::NodeDeclarationBuilder &b)
   StructureType menu_structure_type = value_structure_type;
 
   if (ntree->type == NTREE_COMPOSIT) {
-    const bool is_single_compositor_type = compositor::Result::is_single_value_only_type(
-        compositor::socket_data_type_to_result_type(data_type));
+    const bool is_single_compositor_type = ELEM(data_type, SOCK_STRING, SOCK_OBJECT, SOCK_IMAGE, SOCK_FONT, SOCK_SCENE, SOCK_TEXT_ID, SOCK_MASK, SOCK_BUNDLE);
     if (is_single_compositor_type) {
       value_structure_type = StructureType::Single;
     }
@@ -514,48 +510,8 @@ class LazyFunctionForMenuSwitchSocketUsage : public lf::LazyFunction {
   }
 };
 
-using namespace blender::compositor;
 
-class MenuSwitchOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    Result &value_output = this->get_result("Output");
-    const MenuValue menu_identifier = this->get_input("Menu").get_single_value<MenuValue>();
-    const NodeEnumDefinition &enum_definition = node_storage(node()).enum_definition;
-    bool found_item = false;
-
-    for (const int i : IndexRange(enum_definition.items_num)) {
-      const NodeEnumItem &enum_item = enum_definition.items()[i];
-      const std::string identifier = MenuSwitchItemsAccessor::socket_identifier_for_item(
-          enum_item);
-      const bool is_selected = enum_item.identifier == menu_identifier.value;
-      Result &item_output = this->get_result(identifier);
-      if (item_output.should_compute()) {
-        item_output.allocate_single_value();
-        item_output.set_single_value(is_selected);
-      }
-      if (!is_selected) {
-        continue;
-      }
-      const Result &input = this->get_input(identifier);
-      value_output.share_data(input);
-      found_item = true;
-    }
-
-    if (!found_item) {
-      /* The menu identifier didn't match any item, so allocate an invalid output. */
-      value_output.allocate_invalid();
-    }
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new MenuSwitchOperation(context, node);
-}
 
 static void node_layout_ex(ui::Layout &layout, bContext *C, PointerRNA *ptr)
 {
@@ -660,7 +616,6 @@ static void register_node()
   ntype.blend_write_storage_content = node_blend_write;
   ntype.blend_data_read_storage_content = node_blend_read;
   ntype.internally_linked_input = node_internally_linked_input;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 
   node_rna(ntype.rna_ext.srna);

@@ -16,10 +16,8 @@
 
 #include "DNA_scene_types.h"
 
-#include "BLI_mutex.hh"
 #include "BLI_threads.hh"
 
-#include "RE_compositor.hh"
 #include "RE_pipeline.h"
 
 #include "tile_highlight.h"
@@ -27,11 +25,6 @@
 class GHOST_IContext;
 
 namespace blender {
-
-namespace compositor {
-class RenderContext;
-enum class SideEffectOutputTypes : uint8_t;
-}  // namespace compositor
 
 struct bNodeTree;
 struct Depsgraph;
@@ -50,9 +43,6 @@ struct BaseRender {
    * Note that it might not exist: for example, viewport render does not support the tile
    * highlight. */
   virtual render::TilesHighlight *get_tile_highlight() = 0;
-
-  virtual void compositor_execute(render::CompositorInputData input_data) = 0;
-  virtual void compositor_free() = 0;
 
   /**
    * Executed right before the initialization of the depsgraph, in order to modify some stuff in
@@ -90,9 +80,6 @@ struct ViewRender : public BaseRender {
     return nullptr;
   }
 
-  void compositor_execute(render::CompositorInputData /*input_data*/) override {}
-  void compositor_free() override {}
-
   bool prepare_viewlayer(struct ViewLayer * /*view_layer*/,
                          struct Depsgraph * /*depsgraph*/) override
   {
@@ -109,9 +96,6 @@ struct Render : public BaseRender {
   {
     return &tile_highlight;
   }
-
-  void compositor_execute(render::CompositorInputData input_data) override;
-  void compositor_free() override;
 
   bool prepare_viewlayer(struct ViewLayer *view_layer, struct Depsgraph *depsgraph) override;
 
@@ -161,11 +145,6 @@ struct Render : public BaseRender {
    * layer visibility and use for postprocessing (compositor and sequencer). */
   struct Depsgraph *pipeline_depsgraph = nullptr;
   Scene *pipeline_scene_eval = nullptr;
-
-  /* Compositor.
-   * NOTE: Use bare pointer instead of smart pointer because the it is a fully opaque type. */
-  render::Compositor *compositor = nullptr;
-  Mutex compositor_mutex;
 
   /* Callbacks for the corresponding base class method implementation. */
   bool (*prepare_viewlayer_cb)(void *handle,

@@ -14,7 +14,6 @@
 #include "RNA_access.hh"
 #include "RNA_enum_types.hh"
 
-#include "COM_node_operation.hh"
 
 namespace blender {
 
@@ -73,30 +72,8 @@ class LazyFunctionForWarningNode : public LazyFunction {
   }
 };
 
-using namespace blender::compositor;
 
-class WarningOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    const Result &input_show = this->get_input("Show");
-    Result &output_show = this->get_result("Show");
-    output_show.share_data(input_show);
-    if (!input_show.get_single_value_default<bool>()) {
-      return;
-    }
-
-    const std::string message = this->get_input("Message").get_single_value_default<std::string>();
-    this->add_warning(NodeWarningType(this->node().custom1), message);
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new WarningOperation(context, node);
-}
 
 static void node_layout(ui::Layout &layout, bContext * /*C*/, PointerRNA *ptr)
 {
@@ -140,7 +117,6 @@ static void node_register()
   ntype.declare = node_declare;
   ntype.labelfunc = node_label;
   ntype.draw_buttons = node_layout;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 
   node_rna(ntype.rna_ext.srna);

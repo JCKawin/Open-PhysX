@@ -9,7 +9,6 @@
 
 #include "DEG_depsgraph_query.hh"
 
-#include "COM_node_operation.hh"
 
 #include "node_geometry_util.hh"
 
@@ -135,98 +134,8 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("Orthographic Scale"_ustr, camera_params.ortho_scale);
 }
 
-using namespace blender::compositor;
 
-class CameraInfoOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    const Object *camera_object = this->get_input("Camera").get_single_value<Object *>();
-    if (!camera_object) {
-      this->allocate_default_remaining_outputs();
-      return;
-    }
-
-    if (camera_object->type != OB_CAMERA) {
-      this->add_warning(NodeWarningType::Error, TIP_("Object is not a camera"));
-      this->allocate_default_remaining_outputs();
-      return;
-    }
-
-    const Camera *camera = id_cast<Camera *>(camera_object->data);
-    if (!camera) {
-      this->allocate_default_remaining_outputs();
-      return;
-    }
-
-    const Scene &scene = this->context().get_scene();
-    const CameraParams camera_parameters = get_camera_parameters(scene, *camera_object);
-
-    Result &projection_matrix_result = this->get_result("Projection Matrix");
-    if (projection_matrix_result.should_compute()) {
-      projection_matrix_result.allocate_single_value();
-      projection_matrix_result.set_single_value(float4x4(camera_parameters.winmat));
-    }
-
-    Result &focal_length_result = this->get_result("Focal Length");
-    if (focal_length_result.should_compute()) {
-      focal_length_result.allocate_single_value();
-      focal_length_result.set_single_value(camera_parameters.lens);
-    }
-
-    const float2 sensor_size = compute_sensor_size(scene, camera_parameters);
-    Result &sensor_result = this->get_result("Sensor");
-    if (sensor_result.should_compute()) {
-      sensor_result.allocate_single_value();
-      sensor_result.set_single_value(sensor_size);
-    }
-
-    const float2 lens_shift = compute_lens_shift(scene, camera_parameters);
-    Result &shift_result = this->get_result("Shift");
-    if (shift_result.should_compute()) {
-      shift_result.allocate_single_value();
-      shift_result.set_single_value(lens_shift);
-    }
-
-    Result &clip_start_result = this->get_result("Clip Start");
-    if (clip_start_result.should_compute()) {
-      clip_start_result.allocate_single_value();
-      clip_start_result.set_single_value(camera_parameters.clip_start);
-    }
-
-    Result &clip_end_result = this->get_result("Clip End");
-    if (clip_end_result.should_compute()) {
-      clip_end_result.allocate_single_value();
-      clip_end_result.set_single_value(camera_parameters.clip_end);
-    }
-
-    Result &focus_distance_result = this->get_result("Focus Distance");
-    if (focus_distance_result.should_compute()) {
-      focus_distance_result.allocate_single_value();
-      const float focus_distance = BKE_camera_object_dof_distance(camera_object);
-      focus_distance_result.set_single_value(focus_distance);
-    }
-
-    Result &is_orthographic_result = this->get_result("Is Orthographic");
-    if (is_orthographic_result.should_compute()) {
-      is_orthographic_result.allocate_single_value();
-      is_orthographic_result.set_single_value(camera_parameters.is_ortho);
-    }
-
-    Result &orthographic_scale_result = this->get_result("Orthographic Scale");
-    if (orthographic_scale_result.should_compute()) {
-      orthographic_scale_result.allocate_single_value();
-      orthographic_scale_result.set_single_value(camera_parameters.ortho_scale);
-    }
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new CameraInfoOperation(context, node);
-}
 
 static void node_register()
 {
@@ -238,7 +147,6 @@ static void node_register()
   ntype.nclass = NODE_CLASS_INPUT;
   ntype.geometry_node_execute = node_geo_exec;
   ntype.declare = node_declare;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 }
 NOD_REGISTER_NODE(node_register)

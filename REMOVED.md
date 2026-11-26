@@ -167,3 +167,19 @@ Factory startup exits 0. The default cube is still a mesh, and the largest area 
 Stage B is not done. Grease Pencil drawing, modifiers, and geometry-node components are still compiled.
 
 Rebuild: 3 Ninja steps, 6 seconds, then 3 steps and 8 seconds for the keymap cleanup. `open-physx.exe` linked.
+
+## Compositor — Stage B
+
+Deleted the compositor engine and its node implementations. DNA structs stay, including compositor node storage, scene effects, and `CompositorNodeTree`. Blender-kernel compositor bookkeeping stays (`BKE_compositor.hh` and `blenkernel/intern/compositor.cc`), so scenes still copy, free, and load effect lists.
+
+- `source/blender/compositor/` and `compositor/shaders/` are gone. `bf_compositor` and `bf_compositor_shaders` are no longer built or linked.
+- Compositor node implementations under `nodes/composite/nodes/` are gone. The compositor node-tree type stays registered, with `poll` still returning false. File-output item blend read/write and cryptomatte matte helpers stay, because RNA and the eyedropper still call them.
+- The viewport compositor draw engine is gone. `is_viewport_compositor_used()` returns false.
+- Final render no longer runs `RE_compositor_execute`. `RE_compositor_free` is an empty function.
+- Sequencer compositor strips and the compositor strip modifier stay registered and still load, but evaluation fills black or leaves the image unchanged. Their node-group execution moved out with the engine. The sequencer itself is still compiled.
+
+Factory startup exits 0. The largest area is the 3D Viewport. The default cube is still a mesh, and a saved `.blend` reloads. `CompositorNodeTree` RNA is still there. `SCENE_OT_add_compositor_effect` is still absent.
+
+Rebuild: 1859 Ninja steps. The first pass compiled 1345 of those in 244 seconds; the rest of that rebuild finished in a 124 second continuation. `open-physx.exe` linked. The previous Grease Pencil Stage A rebuild was 3 steps and 6 seconds.
+
+About 67,500 lines removed (495 files in the diff, 47 insertions).

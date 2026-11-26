@@ -5,10 +5,6 @@
 set(INC
   PUBLIC .
   intern
-  ../compositor
-  ../compositor/algorithms
-  ../compositor/cached_resources
-  ../compositor/derived_resources
   ../functions
   ../editors/include
   ../animrig
@@ -138,7 +134,6 @@ set(LIB
   PRIVATE bf::nodes
   PRIVATE bf::render
   PRIVATE bf::windowmanager
-  bf_compositor
   PRIVATE bf::dependencies::optional::audaspace
   PRIVATE bf::dependencies::optional::fftw3
 )

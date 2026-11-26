@@ -11,10 +11,6 @@ set(INC
   ../gpu/intern
   ../makesrna
   ../render/intern
-  ../compositor
-  ../compositor/algorithms
-  ../compositor/cached_resources
-  ../compositor/derived_resources
 
   ../../../intern/opensubdiv
 )
@@ -90,7 +86,6 @@ set(SRC
   intern/draw_view_c.cc
   intern/draw_view_data.cc
   intern/draw_volume.cc
-  engines/compositor/compositor_engine.cc
   engines/image/image_drawing_mode_image_space.cc
   engines/image/image_drawing_mode_screen_space.cc
   engines/image/image_engine.cc
@@ -192,7 +187,6 @@ set(SRC
   intern/draw_view_c.hh
   intern/draw_view_data.hh
   intern/mesh_extractors/extract_mesh.hh
-  engines/compositor/compositor_engine.h
   engines/eevee/eevee_ambient_occlusion.hh
   engines/eevee/eevee_camera.hh
   engines/eevee/eevee_cryptomatte.hh
@@ -313,7 +307,6 @@ set(LIB
   PRIVATE bf::imbuf
   PRIVATE bf::intern::clog
   PRIVATE bf::intern::guardedalloc
-  bf_compositor
   PRIVATE bf::nodes
   PRIVATE bf::render
   PRIVATE bf::windowmanager

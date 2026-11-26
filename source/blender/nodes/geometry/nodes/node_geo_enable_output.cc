@@ -18,8 +18,6 @@
 
 #include "RNA_enum_types.hh"
 
-#include "COM_node_operation.hh"
-#include "COM_result.hh"
 
 namespace blender {
 
@@ -98,30 +96,8 @@ static void node_init(bNodeTree * /*tree*/, bNode *node)
   node->custom1 = SOCK_FLOAT;
 }
 
-using namespace blender::compositor;
 
-class EnableOutputOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    const bool keep = this->get_input("Enable").get_single_value_default<bool>();
-    Result &output = this->get_result("Value");
-    if (keep) {
-      const Result &input = this->get_input("Value");
-      output.share_data(input);
-    }
-    else {
-      output.allocate_invalid();
-    }
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new EnableOutputOperation(context, node);
-}
 
 static const bNodeSocket *get_passthrough_socket(const bNodeSocket &query_input)
 {
@@ -230,7 +206,6 @@ static void node_register()
   ntype.initfunc = node_init;
   ntype.draw_buttons = node_layout;
   ntype.declare = node_declare;
-  ntype.get_compositor_operation = get_compositor_operation;
   ntype.get_extra_info = node_extra_info;
   ntype.internally_linked_input = node_internally_linked_input;
   bke::node_register_type(ntype);

@@ -27,9 +27,6 @@
 #include "BKE_node_socket_value.hh"
 #include "BKE_node_tree_reference_lifetimes.hh"
 
-#include "COM_node_operation.hh"
-#include "COM_result.hh"
-#include "COM_utilities.hh"
 
 #include "GPU_material.hh"
 
@@ -97,8 +94,7 @@ static void node_declare(NodeDeclarationBuilder &b)
   StructureType index_structure_type = value_structure_type;
 
   if (ntree->type == NTREE_COMPOSIT) {
-    const bool is_single_compositor_type = compositor::Result::is_single_value_only_type(
-        compositor::socket_data_type_to_result_type(data_type));
+    const bool is_single_compositor_type = ELEM(data_type, SOCK_STRING, SOCK_OBJECT, SOCK_IMAGE, SOCK_FONT, SOCK_SCENE, SOCK_TEXT_ID, SOCK_MASK, SOCK_BUNDLE);
     if (is_single_compositor_type) {
       value_structure_type = StructureType::Single;
     }
@@ -404,34 +400,8 @@ class LazyFunctionForIndexSwitchNode : public LazyFunction {
   }
 };
 
-using namespace blender::compositor;
 
-class IndexSwitchOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    Result &output = this->get_result("Output");
-    const int index = this->get_input("Index").get_single_value_default<int>();
-    const NodeIndexSwitch &storage = node_storage(node());
-
-    if (!IndexRange(storage.items_num).contains(index)) {
-      output.allocate_invalid();
-      return;
-    }
-
-    const std::string identifier = IndexSwitchItemsAccessor::socket_identifier_for_item(
-        storage.items[index]);
-    const Result &input = this->get_input(identifier);
-    output.share_data(input);
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new IndexSwitchOperation(context, node);
-}
 
 static const EnumPropertyItem *data_type_items_callback(bContext * /*C*/,
                                                         PointerRNA *ptr,
@@ -524,7 +494,6 @@ static void register_node()
   ntype.blend_write_storage_content = node_blend_write;
   ntype.blend_data_read_storage_content = node_blend_read;
   ntype.internally_linked_input = node_internally_linked_input;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 
   node_rna(ntype.rna_ext.srna);

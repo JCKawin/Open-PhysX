@@ -6,9 +6,6 @@
 set(INC
   PUBLIC .
   intern
-  ../compositor
-  ../compositor/cached_resources
-  ../compositor/derived_resources
   ../functions
   ../draw/intern
   ../gpu/intern
@@ -63,7 +60,6 @@ set(LIB
   PRIVATE bf::imbuf
   PRIVATE bf::imbuf::movie
   PRIVATE bf::intern::guardedalloc
-  bf_compositor
   bf_imbuf_openexr
   PRIVATE bf::intern::atomic
   PRIVATE bf::intern::clog

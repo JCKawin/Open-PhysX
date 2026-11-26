@@ -16,7 +16,6 @@ set(INC
   ../editors/include
 
   # For `*_info.hh` includes.
-  ../compositor/shaders/infos
   ../draw/engines/eevee
   ../draw/engines/gpencil
   ../draw/engines/gpencil/shaders/infos
@@ -909,7 +908,6 @@ endif()
 blender_add_lib(bf_gpu "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
 add_library(bf::gpu ALIAS bf_gpu)
 target_link_libraries(bf_gpu PUBLIC
-  bf_compositor_shaders
   bf_draw_shaders
   bf_gpu_shaders
   bf_imbuf_opencolorio_shaders

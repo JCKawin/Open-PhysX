@@ -40,7 +40,6 @@ namespace blender {
 extern "C" {
 #define SHADER_SOURCE(filename_underscore, filename, filepath) \
   extern char datatoc_##filename_underscore[];
-#include "glsl_compositor_source_list.h"
 #include "glsl_draw_source_list.h"
 #include "glsl_gpu_source_list.h"
 #include "glsl_ocio_source_list.h"
@@ -511,7 +510,6 @@ struct GPUSource {
 
 namespace shader {
 
-#include "glsl_compositor_metadata_list.hh"
 #include "glsl_draw_metadata_list.hh"
 #include "glsl_gpu_metadata_list.hh"
 #include "glsl_ocio_metadata_list.hh"
@@ -550,7 +548,6 @@ void gpu_shader_dependency_init()
                                    g_formats, \
                                    gpu::shader::metadata_##filename_underscore));
 
-#include "glsl_compositor_source_list.h"
 #include "glsl_draw_source_list.h"
 #include "glsl_gpu_source_list.h"
 #include "glsl_ocio_source_list.h"

@@ -16,8 +16,6 @@
 
 #include "RNA_enum_types.hh"
 
-#include "COM_node_operation.hh"
-#include "COM_utilities.hh"
 
 #include "FN_multi_function_builder.hh"
 
@@ -46,8 +44,7 @@ static void node_declare(NodeDeclarationBuilder &b)
   StructureType condition_structure_type = StructureType::Dynamic;
 
   if (node_tree->type == NTREE_COMPOSIT) {
-    const bool is_single_compositor_type = compositor::Result::is_single_value_only_type(
-        compositor::socket_data_type_to_result_type(socket_type));
+    const bool is_single_compositor_type = ELEM(socket_type, SOCK_STRING, SOCK_OBJECT, SOCK_IMAGE, SOCK_FONT, SOCK_SCENE, SOCK_TEXT_ID, SOCK_MASK, SOCK_BUNDLE);
     if (is_single_compositor_type) {
       value_structure_type = StructureType::Single;
     }
@@ -247,29 +244,8 @@ class LazyFunctionForSwitchNode : public LazyFunction {
   }
 };
 
-using namespace blender::compositor;
 
-class SwitchOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    const Result &input = this->get_input(this->get_condition() ? "True" : "False");
-    Result &output = this->get_result("Output");
-    output.share_data(input);
-  }
-
-  bool get_condition()
-  {
-    return this->get_input("Switch").get_single_value_default<bool>();
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new SwitchOperation(context, node);
-}
 
 static const bNodeSocket *node_internally_linked_input(const bNodeTree & /*tree*/,
                                                        const bNode &node,
@@ -317,7 +293,6 @@ static void register_node()
   ntype.draw_buttons = node_layout;
   ntype.ignore_inferred_input_socket_visibility = true;
   ntype.internally_linked_input = node_internally_linked_input;
-  ntype.get_compositor_operation = get_compositor_operation;
 
   bke::node_register_type(ntype);
 

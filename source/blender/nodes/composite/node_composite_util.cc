@@ -10,6 +10,7 @@
 
 #include "BKE_node_runtime.hh"
 
+#include "NOD_common.hh"
 #include "NOD_socket_search_link.hh"
 
 #include "node_composite_util.hh"
@@ -36,6 +37,17 @@ void cmp_node_type_base(bke::bNodeType *ntype,
   ntype->poll = cmp_node_poll_default;
   ntype->insert_link = node_insert_link_default;
   ntype->gather_link_search_ops = nodes::search_link_ops_for_basic_node;
+}
+
+void register_node_type_cmp_custom_group(bke::bNodeType *ntype)
+{
+  if (ntype->poll == nullptr) {
+    ntype->poll = cmp_node_poll_default;
+  }
+  if (ntype->insert_link == nullptr) {
+    ntype->insert_link = node_insert_link_default;
+  }
+  ntype->declare = nodes::node_group_declare;
 }
 
 }  // namespace blender

@@ -702,11 +702,7 @@ using namespace blender::gpu::shader;
 #endif
 
 /* Split functions to avoid stack overflow on windows. */
-static void init_compositor_infos()
-{
-/* Declare, register and construct the infos. */
-#include "glsl_compositor_infos_list.hh"
-}
+static void init_compositor_infos() {}
 
 static void init_draw_infos()
 {

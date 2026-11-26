@@ -14,7 +14,6 @@
 #include "BLI_string.hh"
 #include "BLI_string_utf8.hh"
 
-#include "COM_node_operation.hh"
 
 #include "node_geometry_util.hh"
 
@@ -88,62 +87,7 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("String"_ustr, cached_value->text);
 }
 
-class ImportTextOperation : public compositor::NodeOperation {
- public:
-  using compositor::NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    compositor::Result &result = this->get_result("String");
-    if (!result.should_compute()) {
-      return;
-    }
-
-    const std::optional<std::string> path = this->ensure_absolute_path(
-        this->get_input("Path").get_single_value_default<std::string>());
-    if (!path) {
-      result.allocate_single_value();
-      result.set_single_value(std::string(""));
-      return;
-    }
-
-    std::shared_ptr<const LoadTextCache> cached_value = get_cached_text(*path);
-
-    for (const NodeWarning &warning : cached_value->warnings) {
-      this->add_warning(warning.type, warning.message);
-    }
-
-    result.allocate_single_value();
-    result.set_single_value(cached_value->text);
-  }
-
- private:
-  std::optional<std::string> ensure_absolute_path(const StringRefNull path) const
-  {
-    if (path.is_empty()) {
-      return std::nullopt;
-    }
-    if (!BLI_path_is_rel(path.c_str())) {
-      return std::string(path);
-    }
-    const Main &bmain = this->context().get_main();
-    const bNodeTree &tree = this->node().owner_tree();
-    const char *base_path = ID_BLEND_PATH(&bmain, &tree.id);
-    if (!base_path || base_path[0] == '\0') {
-      return std::nullopt;
-    }
-    char absolute_path[FILE_MAX];
-    STRNCPY(absolute_path, path.c_str());
-    BLI_path_abs(absolute_path, base_path);
-    return absolute_path;
-  }
-};
-
-static compositor::NodeOperation *get_compositor_operation(compositor::Context &context,
-                                                           const bNode &node)
-{
-  return new ImportTextOperation(context, node);
-}
 
 static void node_register()
 {
@@ -155,7 +99,6 @@ static void node_register()
   ntype.nclass = NODE_CLASS_INPUT;
   ntype.geometry_node_execute = node_geo_exec;
   ntype.declare = node_declare;
-  ntype.get_compositor_operation = get_compositor_operation;
 
   bke::node_register_type(ntype);
 }

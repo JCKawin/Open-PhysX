@@ -56,8 +56,6 @@ set(INC
   function/include
   geometry/include
   ../animrig
-  ../compositor
-  ../compositor/cached_resources
   ../editors/include
   ../depsgraph
   ../makesrna

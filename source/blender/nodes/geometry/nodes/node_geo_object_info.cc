@@ -22,7 +22,6 @@
 
 #include "BLT_translation.hh"
 
-#include "COM_node_operation.hh"
 
 #include "node_geometry_util.hh"
 
@@ -167,56 +166,8 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("Geometry"_ustr, geometry_set);
 }
 
-using namespace blender::compositor;
 
-class ObjectInfoOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    const Object *object = this->get_input("Object").get_single_value<Object *>();
-    if (!object) {
-      this->allocate_default_remaining_outputs();
-      return;
-    }
-
-    const float4x4 transform = object->object_to_world();
-
-    float3 location, scale;
-    math::Quaternion rotation;
-    math::to_loc_rot_scale_safe<true>(transform, location, rotation, scale);
-
-    Result &transform_result = this->get_result("Transform");
-    if (transform_result.should_compute()) {
-      transform_result.allocate_single_value();
-      transform_result.set_single_value(transform);
-    }
-
-    Result &location_result = this->get_result("Location");
-    if (location_result.should_compute()) {
-      location_result.allocate_single_value();
-      location_result.set_single_value(location);
-    }
-
-    Result &rotation_result = this->get_result("Rotation");
-    if (rotation_result.should_compute()) {
-      rotation_result.allocate_single_value();
-      rotation_result.set_single_value(rotation);
-    }
-
-    Result &scale_result = this->get_result("Scale");
-    if (scale_result.should_compute()) {
-      scale_result.allocate_single_value();
-      scale_result.set_single_value(scale);
-    }
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new ObjectInfoOperation(context, node);
-}
 
 static void node_node_init(bNodeTree * /*tree*/, bNode *node)
 {
@@ -281,7 +232,6 @@ static void node_register()
   ntype.draw_buttons = node_layout;
   ntype.declare = node_declare;
   ntype.gather_link_search_ops = node_gather_link_searches;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 
   node_rna(ntype.rna_ext.srna);

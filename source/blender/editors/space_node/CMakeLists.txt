@@ -5,11 +5,6 @@
 set(INC
   ../include
   ../io
-  ../../compositor
-  ../../compositor/algorithms
-  ../../compositor/cached_resources
-  ../../compositor/derived_resources
-  ../../compositor/utilities
   ../../makesrna
   ../../nodes/geometry/include
   ../../sequencer
@@ -70,7 +65,6 @@ set(LIB
   PRIVATE bf::gpu
   PRIVATE bf::imbuf
   PRIVATE bf::intern::guardedalloc
-  bf_compositor
   PRIVATE bf::nodes
   PRIVATE bf::render
   PRIVATE bf::windowmanager

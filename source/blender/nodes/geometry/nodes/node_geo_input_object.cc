@@ -5,7 +5,6 @@
 #include "UI_interface_layout.hh"
 #include "UI_resources.hh"
 
-#include "COM_node_operation.hh"
 
 #include "node_geometry_util.hh"
 
@@ -25,25 +24,8 @@ static void node_geo_exec(GeoNodeExecParams params)
   params.set_output("Object"_ustr, object);
 }
 
-using namespace blender::compositor;
 
-class InputObjectOperation : public NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
 
-  void execute() override
-  {
-    Object *object = reinterpret_cast<Object *>(this->node().id);
-    Result &result = this->get_result("Object");
-    result.allocate_single_value();
-    result.set_single_value(object);
-  }
-};
-
-static NodeOperation *get_compositor_operation(Context &context, const bNode &node)
-{
-  return new InputObjectOperation(context, node);
-}
 
 static void node_register()
 {
@@ -56,7 +38,6 @@ static void node_register()
   ntype.nclass = NODE_CLASS_INPUT;
   ntype.declare = node_declare;
   ntype.geometry_node_execute = node_geo_exec;
-  ntype.get_compositor_operation = get_compositor_operation;
   bke::node_register_type(ntype);
 }
 NOD_REGISTER_NODE(node_register)

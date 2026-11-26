@@ -35,9 +35,6 @@
 #include "BKE_node_runtime.hh"
 #include "BKE_node_tree_interface.hh"
 
-#include "COM_node_operation.hh"
-#include "COM_result.hh"
-
 #include "MEM_guardedalloc.h"
 
 #include "NOD_common.hh"
@@ -917,25 +914,6 @@ static void node_implicit_conversion_geo_exec(nodes::GeoNodeExecParams params)
   params.set_output("Value"_ustr, std::move(input_value));
 }
 
-class ImplicitConversionOperation : public compositor::NodeOperation {
- public:
-  using NodeOperation::NodeOperation;
-
-  void execute() override
-  {
-    using namespace compositor;
-    const Result &input = this->get_input("Value");
-    Result &output = this->get_result("Value");
-    output.share_data(input);
-  }
-};
-
-static compositor::NodeOperation *node_implicit_conversion_compositor_operation(
-    compositor::Context &context, const bNode &node)
-{
-  return new ImplicitConversionOperation(context, node);
-}
-
 void register_node_type_implicit_conversion()
 {
   /* Adapt type node is used for all tree types, needs dynamic allocation. */
@@ -954,7 +932,6 @@ void register_node_type_implicit_conversion()
       *ntype, "NodeImplicitConversion", node_free_standard_storage, node_copy_standard_storage);
   ntype->poll_instance = node_implicit_conversion_poll_instance;
   ntype->geometry_node_execute = node_implicit_conversion_geo_exec;
-  ntype->get_compositor_operation = node_implicit_conversion_compositor_operation;
 
   bke::node_register_type(*ntype);
 }
