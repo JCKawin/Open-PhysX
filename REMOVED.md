@@ -136,3 +136,19 @@ Factory startup exits 0. The Layout workspace still opens with the 3D Viewport a
 Stage B is not done. `source/blender/sequencer/`, `editors/space_sequencer/`, and the sequencer calls in the render pipeline still reference that code.
 
 Rebuild: 13 Ninja steps, 38 seconds, then 3 steps and 8 seconds for the keymap cleanup. `open-physx.exe` linked.
+
+## Tracking and masks — Stage A
+
+Unregistered the Movie Clip Editor, mask operators, and the tracking constraints from the add menus. No tracking or mask sources were deleted. Movie clip, tracking, and mask DNA stay so old files still load. A stored clip-editor area falls back to the 3D Viewport.
+
+- `ED_spacetype_clip`, `ED_operatortypes_mask`, `ED_operatormacros_clip`, `ED_operatormacros_mask`, and `ED_keymap_mask` are no longer called.
+- `CLIP_EDITOR` is no longer an editor-type menu item.
+- `bl_ui` no longer loads `space_clip` or `properties_mask_common`. Image Editor mask panels are not registered.
+- Follow Track, Camera Solver, and Object Solver are filtered out of the object and pose constraint add menus. Their type-info slots stay.
+- Modal keymap assigns for the clip and mask select operators were removed.
+
+Factory startup exits 0. The Layout workspace still opens on the 3D Viewport. `CLIP_HT_header`, `CLIP_OT_solve_camera`, `MASK_OT_select_box`, and the `CLIP_EDITOR` enum item are absent.
+
+Stage B is not done. `editors/space_clip/`, `editors/mask/`, and `intern/libmv` stay.
+
+Rebuild: 17 Ninja steps, 34 seconds. `open-physx.exe` linked.

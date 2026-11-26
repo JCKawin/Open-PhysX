@@ -25,7 +25,6 @@
 #include "ED_anim_api.hh"
 #include "ED_armature.hh"
 #include "ED_asset.hh"
-#include "ED_clip.hh"
 #include "ED_curve.hh"
 #include "ED_curves.hh"
 #include "ED_curves_sculpt.hh"
@@ -36,7 +35,6 @@
 #include "ED_grease_pencil.hh"
 #include "ED_lattice.hh"
 #include "ED_markers.hh"
-#include "ED_mask.hh"
 #include "ED_mball.hh"
 #include "ED_mesh.hh"
 #include "ED_node.hh"
@@ -80,7 +78,6 @@ void ED_spacetypes_init()
   ED_spacetype_text();
   ED_spacetype_console();
   ED_spacetype_userpref();
-  ED_spacetype_clip();
   ED_spacetype_project();
   ED_spacetype_statusbar();
   ED_spacetype_topbar();
@@ -113,7 +110,6 @@ void ED_spacetypes_init()
   ED_operatortypes_metaball();
   ED_operatortypes_sound();
   ED_operatortypes_render();
-  ED_operatortypes_mask();
   ED_operatortypes_io();
   ED_operatortypes_edutils();
 
@@ -162,11 +158,9 @@ void ED_spacemacros_init()
   ED_operatormacros_file();
   ED_operatormacros_graph();
   ED_operatormacros_action();
-  ED_operatormacros_clip();
   ED_operatormacros_curve();
   curves::operatormacros_curves();
   pointcloud::operatormacros_pointcloud();
-  ED_operatormacros_mask();
   ED_operatormacros_paint();
   ED_operatormacros_grease_pencil();
   ED_operatormacros_nla();
@@ -199,7 +193,6 @@ void ED_spacetypes_keymap(wmKeyConfig *keyconf)
   ED_keymap_physics(keyconf);
   ED_keymap_metaball(keyconf);
   ED_keymap_paint(keyconf);
-  ED_keymap_mask(keyconf);
   ED_keymap_marker(keyconf);
   sculpt_paint::keymap_sculpt(keyconf);
 

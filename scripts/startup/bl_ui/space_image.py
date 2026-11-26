@@ -1857,7 +1857,6 @@ classes = (
     IMAGE_MT_uvs_unwrap,
     IMAGE_MT_uvs_select_mode,
     IMAGE_MT_uvs_context_menu,
-    IMAGE_MT_mask_context_menu,
     IMAGE_MT_pivot_pie,
     IMAGE_MT_uvs_snap_pie,
     IMAGE_MT_view_pie,
@@ -1865,11 +1864,6 @@ classes = (
     IMAGE_HT_header,
     IMAGE_MT_editor_menus,
     IMAGE_PT_active_tool,
-    IMAGE_PT_mask,
-    IMAGE_PT_mask_layers,
-    IMAGE_PT_active_mask_spline,
-    IMAGE_PT_active_mask_point,
-    IMAGE_PT_mask_animation,
     IMAGE_PT_snapping,
     IMAGE_PT_proportional_edit,
     IMAGE_PT_image_properties,
@@ -1908,7 +1902,7 @@ classes = (
     IMAGE_PT_overlay_uv_display,
     IMAGE_PT_overlay_image,
     IMAGE_PT_overlay_render_guides,
-    IMAGE_PT_overlay_mask,
+
     IMAGE_AST_brush_paint,
 )
 

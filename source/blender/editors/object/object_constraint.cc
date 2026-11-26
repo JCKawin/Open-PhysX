@@ -2507,7 +2507,10 @@ static const EnumPropertyItem *object_constraint_add_itemf(bContext * /*C*/,
     if (!ELEM(item->value,
               CONSTRAINT_TYPE_KINEMATIC,
               CONSTRAINT_TYPE_SPLINEIK,
-              CONSTRAINT_TYPE_TRANSFORM_CACHE))
+              CONSTRAINT_TYPE_TRANSFORM_CACHE,
+              CONSTRAINT_TYPE_FOLLOWTRACK,
+              CONSTRAINT_TYPE_CAMERASOLVER,
+              CONSTRAINT_TYPE_OBJECTSOLVER))
     {
       RNA_enum_item_add(&object_constraint_items, &totitem, item);
     }
@@ -2584,7 +2587,12 @@ static const EnumPropertyItem *pose_constraint_add_itemf(bContext * /*C*/,
   int totitem = 0;
 
   while (item->identifier) {
-    if (item->value != CONSTRAINT_TYPE_TRANSFORM_CACHE) {
+    if (!ELEM(item->value,
+              CONSTRAINT_TYPE_TRANSFORM_CACHE,
+              CONSTRAINT_TYPE_FOLLOWTRACK,
+              CONSTRAINT_TYPE_CAMERASOLVER,
+              CONSTRAINT_TYPE_OBJECTSOLVER))
+    {
       RNA_enum_item_add(&pose_constraint_items, &totitem, item);
     }
     item++;

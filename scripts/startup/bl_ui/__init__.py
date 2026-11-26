@@ -36,7 +36,6 @@ _modules = [
     "properties_data_lightprobe",
     "properties_data_speaker",
     "properties_data_volume",
-    "properties_mask_common",
     "properties_material",
     "properties_material_gpencil",
     "properties_object",
@@ -67,7 +66,6 @@ _modules = [
     "space_toolsystem_common",
     "space_toolsystem_toolbar",
 
-    "space_clip",
     "space_console",
     "space_dopesheet",
     "space_filebrowser",

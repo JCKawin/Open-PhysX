@@ -109,7 +109,6 @@ const EnumPropertyItem rna_enum_space_type_items[] = {
      ICON_NODETREE,
      "Node Editor",
      "Editor for node-based shading and compositing tools"},
-    {SPACE_CLIP, "CLIP_EDITOR", ICON_TRACKER, "Movie Clip Editor", "Motion tracking tools"},
 
     /* Animation. */
     RNA_ENUM_ITEM_HEADING(N_("Animation"), nullptr),
