@@ -265,7 +265,13 @@ def keyconfig_init_from_data(kc, keyconfig_data):
     #
     # Runs at load time, keep this fast!
     for (km_name, km_args, km_content) in keyconfig_data:
-        km = kc.keymaps.new(km_name, **km_args)
+        try:
+            km = kc.keymaps.new(km_name, **km_args)
+        except TypeError as ex:
+            # Editors removed from the space-type enum (clip, sequencer) still
+            # have keymap entries. Skip those maps so the rest of the config loads.
+            print(f"Warning: skipping keymap {km_name!r}: {ex}")
+            continue
         km_items = km_content["items"]
         # Check here instead of inside 'keymap_init_from_data'
         # because we want to allow both tuple & list types in that case.
