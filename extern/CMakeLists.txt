@@ -95,11 +95,6 @@ if(WITH_AUDASPACE AND NOT WITH_SYSTEM_AUDASPACE)
   unset(LIB_SUFFIX)
 endif()
 
-if(WITH_QUADRIFLOW)
-  set(QUADRIFLOW_CMAKE_CFG ${CMAKE_CURRENT_SOURCE_DIR}/quadriflow/blender_config.cmake)
-  add_subdirectory(quadriflow)
-endif()
-
 if(WITH_MOD_FLUID)
   add_subdirectory(mantaflow)
 endif()

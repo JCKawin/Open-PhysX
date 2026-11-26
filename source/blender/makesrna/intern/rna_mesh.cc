@@ -93,7 +93,7 @@ const EnumPropertyItem rna_enum_mesh_walk_delimit_face_loop_items[] = {
 
 static const EnumPropertyItem rna_enum_mesh_remesh_mode_items[] = {
     {REMESH_VOXEL, "VOXEL", 0, "Voxel", "Use the voxel remesher"},
-    {REMESH_QUAD, "QUAD", 0, "Quad", "Use the quad remesher"},
+    {REMESH_QUAD, "QUAD", 0, "Quad", "Quad remesher was removed; stored value is kept for old files"},
     {0, nullptr, 0, nullptr, nullptr},
 };
 

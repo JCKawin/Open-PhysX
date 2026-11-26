@@ -24,14 +24,6 @@ Mesh *BKE_mesh_remesh_voxel(const Mesh *mesh,
                             ModifierData *modifier_data);
 Mesh *BKE_mesh_remesh_voxel(
     const Mesh *mesh, float voxel_size, float adaptivity, float isovalue, ReportList *reports);
-Mesh *BKE_mesh_remesh_quadriflow(const Mesh *mesh,
-                                 int target_faces,
-                                 int seed,
-                                 bool preserve_sharp,
-                                 bool preserve_boundary,
-                                 bool adaptive_scale,
-                                 void (*update_cb)(void *, float progress, int *cancel),
-                                 void *update_cb_data);
 
 namespace bke {
 void mesh_remesh_reproject_attributes(const Mesh &src, Mesh &dst);

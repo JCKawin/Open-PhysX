@@ -49,10 +49,6 @@ if(WITH_UV_SLIM)
   add_subdirectory(slim)
 endif()
 
-if(WITH_QUADRIFLOW)
-  add_subdirectory(quadriflow)
-endif()
-
 if(UNIX AND NOT APPLE)
   add_subdirectory(libc_compat)
 endif()

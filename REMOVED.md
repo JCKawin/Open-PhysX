@@ -97,3 +97,11 @@ Cache modifier and constraint DNA stay so old files still load. `MeshSeqCacheMod
 Hydra's CMake file still names `bf_io_usd`, and `WITH_HYDRA` stays off because it depends on USD. `rna_usd.cc` stays on disk and is not compiled.
 
 Rebuild: 215 Ninja steps, 48 seconds. `open-physx.exe` linked. The previous Freestyle rebuild was 230 seconds; this one is shorter because ccache covered the makesrna regeneration.
+
+## QuadriFlow
+
+Deleted `extern/quadriflow/` (including the bundled LEMON library) and `intern/quadriflow/`. About 121,000 lines (250 files in the commit, 8 insertions).
+
+`WITH_QUADRIFLOW` stays off. Those trees are no longer CMake subdirectories, and `bf_blenkernel` no longer links `bf_intern_quadriflow`. `OBJECT_OT_quadriflow_remesh` is gone, along with `BKE_mesh_remesh_quadriflow`. The mesh data properties panel no longer offers a Quad mode; it only shows Voxel Remesh. `REMESH_QUAD` stays in DNA and in the RNA enum so an old file that stored that mode still loads. `WM_JOB_TYPE_QUADRIFLOW_REMESH` stays in the job-type enum so later values do not shift. Voxel remesh is unchanged.
+
+Rebuild: 38 Ninja steps, 52 seconds. `open-physx.exe` linked. The previous USD rebuild was 215 steps and 48 seconds.

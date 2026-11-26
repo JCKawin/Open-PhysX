@@ -738,16 +738,6 @@ if(WITH_USD)
   add_definitions(-DWITH_USD)
 endif()
 
-if(WITH_QUADRIFLOW)
-  list(APPEND INC
-    ../../../intern/quadriflow
-  )
-  list(APPEND LIB
-    bf_intern_quadriflow
-  )
-  add_definitions(-DWITH_QUADRIFLOW)
-endif()
-
 if(WITH_XR_OPENXR)
   add_definitions(-DWITH_XR_OPENXR)
 endif()

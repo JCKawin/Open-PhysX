@@ -414,23 +414,18 @@ class DATA_PT_remesh(MeshButtonsPanel, Panel):
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False
-        row = layout.row()
 
         mesh = context.mesh
-        row.prop(mesh, "remesh_mode", text="Mode", expand=True)
         col = layout.column()
-        if mesh.remesh_mode == 'VOXEL':
-            col.prop(mesh, "remesh_voxel_size")
-            col.prop(mesh, "remesh_voxel_adaptivity")
-            col.prop(mesh, "use_remesh_fix_poles")
+        col.prop(mesh, "remesh_voxel_size")
+        col.prop(mesh, "remesh_voxel_adaptivity")
+        col.prop(mesh, "use_remesh_fix_poles")
 
-            col = layout.column(heading="Preserve")
-            col.prop(mesh, "use_remesh_preserve_volume", text="Volume")
-            col.prop(mesh, "use_remesh_preserve_attributes", text="Attributes")
+        col = layout.column(heading="Preserve")
+        col.prop(mesh, "use_remesh_preserve_volume", text="Volume")
+        col.prop(mesh, "use_remesh_preserve_attributes", text="Attributes")
 
-            col.operator("object.voxel_remesh", text="Voxel Remesh")
-        else:
-            col.operator("object.quadriflow_remesh", text="QuadriFlow Remesh")
+        col.operator("object.voxel_remesh", text="Voxel Remesh")
 
 
 class DATA_PT_customdata(MeshButtonsPanel, Panel):

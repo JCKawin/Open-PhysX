@@ -276,8 +276,6 @@ void operatortypes_object()
   WM_operatortype_append(OBJECT_OT_voxel_remesh);
   WM_operatortype_append(OBJECT_OT_voxel_size_edit);
 
-  WM_operatortype_append(OBJECT_OT_quadriflow_remesh);
-
   /* Light linking. */
 
   WM_operatortype_append(OBJECT_OT_light_linking_receiver_collection_new);
