@@ -121,3 +121,18 @@ Factory startup (`--background --factory-startup`) exits 0. `SCENE_OT_add_compos
 Stage B is not done. `source/blender/compositor/`, `source/blender/nodes/composite/`, the draw compositor engine, `render/intern/compositor.cc`, and the sequencer compositor effect still reference that code. Deleting those files would touch far more than the call sites that can be stubbed in one pass.
 
 Rebuild after the header change: 407 Ninja steps, 409 seconds. `open-physx.exe` linked. The unregister itself, before the `is_type` edit, was 10 steps and 20 seconds. The previous QuadriFlow rebuild was 38 steps and 52 seconds.
+
+## Sequencer — Stage A
+
+Unregistered the Video Sequencer editor. No sequencer sources were deleted. Strip DNA, `Editing`, and the sequencer library stay so old files still load. A stored sequencer area is turned into an empty area on read and then falls back to the 3D Viewport.
+
+- `vse::ED_spacetype_sequencer()` and `vse::ED_operatormacros_sequencer()` are no longer called, so the editor and its operators are not registered.
+- `SEQUENCE_EDITOR` is no longer an editor-type menu item.
+- `bl_ui` no longer loads `space_sequencer`, `properties_strip`, or `properties_strip_modifier`. The properties tabs Strip and Strip Modifiers are gone. The sequencer tool shelf is not registered.
+- Modal keymap assigns for `SEQUENCER_OT_select_circle`, `select_box`, `box_blade`, `view_ghost_border`, and `select_lasso` were removed so startup does not log unknown-operator errors.
+
+Factory startup exits 0. The Layout workspace still opens with the 3D Viewport as the largest area. `SEQUENCER_HT_header`, `SEQUENCER_OT_split`, and the `SEQUENCE_EDITOR` enum item are absent.
+
+Stage B is not done. `source/blender/sequencer/`, `editors/space_sequencer/`, and the sequencer calls in the render pipeline still reference that code.
+
+Rebuild: 13 Ninja steps, 38 seconds, then 3 steps and 8 seconds for the keymap cleanup. `open-physx.exe` linked.

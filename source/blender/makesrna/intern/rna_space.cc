@@ -109,11 +109,6 @@ const EnumPropertyItem rna_enum_space_type_items[] = {
      ICON_NODETREE,
      "Node Editor",
      "Editor for node-based shading and compositing tools"},
-    {SPACE_SEQ,
-     "SEQUENCE_EDITOR",
-     ICON_SEQUENCE,
-     "Video Sequencer",
-     "Non-linear editor for arranging and mixing scenes, video, audio, and effects"},
     {SPACE_CLIP, "CLIP_EDITOR", ICON_TRACKER, "Movie Clip Editor", "Motion tracking tools"},
 
     /* Animation. */

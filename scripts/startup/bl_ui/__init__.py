@@ -59,8 +59,6 @@ _modules = [
     "properties_texture",
     "properties_world",
     "properties_collection",
-    "properties_strip",
-    "properties_strip_modifier",
     "generic_ui_list",
 
     # Generic Space Modules
@@ -81,7 +79,6 @@ _modules = [
     "space_outliner",
     "space_project",
     "space_properties",
-    "space_sequencer",
     "space_spreadsheet",
     "space_statusbar",
     "space_text",

@@ -4335,7 +4335,6 @@ classes = (
     IMAGE_PT_tools_active,
     NODE_PT_tools_active,
     VIEW3D_PT_tools_active,
-    SEQUENCER_PT_tools_active,
 )
 
 if __name__ == "__main__":  # only for live edit.
