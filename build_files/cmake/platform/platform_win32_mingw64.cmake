@@ -481,6 +481,10 @@ endif()
 
 # GNU Compiler
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+  # Unix sets this before the linker probe. Without it the lld check below never runs.
+  if(NOT DEFINED _IS_LINKER_DEFAULT)
+    set(_IS_LINKER_DEFAULT ON)
+  endif()
   # ffp-contract=off:
   # Automatically turned on when building with "-march=native". This is
   # explicitly turned off here as it will make floating point math give a bit
@@ -498,18 +502,23 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   unset(GCC_EXTRA_FLAGS_RELEASE)
   
   if(WITH_LINKER_LLD AND _IS_LINKER_DEFAULT)
+    # GCC prints the LLD banner on stderr. Capture both streams.
     execute_process(
       COMMAND ${CMAKE_C_COMPILER} -fuse-ld=lld -Wl,--version
-      ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
-    if("${LD_VERSION}" MATCHES "LLD")
+      OUTPUT_VARIABLE LD_VERSION_OUT
+      ERROR_VARIABLE LD_VERSION_ERR
+    )
+    if("${LD_VERSION_OUT}${LD_VERSION_ERR}" MATCHES "LLD")
       string(APPEND CMAKE_EXE_LINKER_FLAGS    " -fuse-ld=lld")
       string(APPEND CMAKE_SHARED_LINKER_FLAGS " -fuse-ld=lld")
       string(APPEND CMAKE_MODULE_LINKER_FLAGS " -fuse-ld=lld")
       set(_IS_LINKER_DEFAULT OFF)
+      message(STATUS "Using ld.lld")
     else()
       message(STATUS "LLD linker isn't available, using the default system linker.")
     endif()
-    unset(LD_VERSION)
+    unset(LD_VERSION_OUT)
+    unset(LD_VERSION_ERR)
   endif()
 
 # CLang is the same as GCC for now.
