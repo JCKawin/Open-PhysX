@@ -32,7 +32,6 @@
 #include "ED_geometry.hh"
 #include "ED_gizmo_library.hh"
 #include "ED_gpencil_legacy.hh"
-#include "ED_grease_pencil.hh"
 #include "ED_lattice.hh"
 #include "ED_markers.hh"
 #include "ED_mball.hh"
@@ -92,7 +91,6 @@ void ED_spacetypes_init()
   ED_operatortypes_animchannels();
   asset::operatortypes_asset();
   ED_operatortypes_gpencil_legacy();
-  ED_operatortypes_grease_pencil();
   object::operatortypes_object();
   ED_operatortypes_lattice();
   ED_operatortypes_mesh();
@@ -162,7 +160,6 @@ void ED_spacemacros_init()
   curves::operatormacros_curves();
   pointcloud::operatormacros_pointcloud();
   ED_operatormacros_paint();
-  ED_operatormacros_grease_pencil();
   ED_operatormacros_nla();
 
   /* Register dropboxes (can use macros). */
@@ -181,7 +178,6 @@ void ED_spacetypes_keymap(wmKeyConfig *keyconf)
   ED_keymap_anim(keyconf);
   ED_keymap_animchannels(keyconf);
   ED_keymap_gpencil_legacy(keyconf);
-  ED_keymap_grease_pencil(keyconf);
   object::keymap_object(keyconf);
   ED_keymap_lattice(keyconf);
   ED_keymap_mesh(keyconf);

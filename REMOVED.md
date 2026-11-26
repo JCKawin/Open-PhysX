@@ -152,3 +152,18 @@ Factory startup exits 0. The Layout workspace still opens on the 3D Viewport. `C
 Stage B is not done. `editors/space_clip/`, `editors/mask/`, and `intern/libmv` stay.
 
 Rebuild: 17 Ninja steps, 34 seconds. `open-physx.exe` linked.
+
+## Grease Pencil — Stage A
+
+Unregistered Grease Pencil object operators, keymaps, the Add menu entry, and the Grease Pencil modifier menu items. Sources and DNA stay, including `GreasePencil` and the grease pencil modifier type slots, so old files still load. Annotation operators (`ED_operatortypes_gpencil_legacy` and its keymap) stay.
+
+- `ED_operatortypes_grease_pencil`, `ED_operatormacros_grease_pencil`, and `ED_keymap_grease_pencil` are no longer called.
+- Add → Grease Pencil is gone.
+- Grease Pencil entries are gone from the modifier add menus. The type-info slots stay.
+- Modal keymap assigns for `GREASE_PENCIL_OT_erase_box` and `erase_lasso` were removed.
+
+Factory startup exits 0. The default cube is still a mesh, and the largest area is the 3D Viewport. `OBJECT_OT_grease_pencil_add` is absent.
+
+Stage B is not done. Grease Pencil drawing, modifiers, and geometry-node components are still compiled.
+
+Rebuild: 3 Ninja steps, 6 seconds, then 3 steps and 8 seconds for the keymap cleanup. `open-physx.exe` linked.
