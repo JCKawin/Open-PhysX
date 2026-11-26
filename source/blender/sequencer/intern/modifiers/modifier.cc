@@ -160,13 +160,8 @@ static void modifier_panel_header(const bContext * /*C*/, Panel *panel)
 
   ui::panel_context_pointer_set(panel, "modifier", ptr);
 
-  /* Modifier Icon. */
-  ui::Layout *sub = &layout.row(true);
-  sub->emboss_set(ui::EmbossType::None);
-  PointerRNA active_op_ptr = sub->op(
-      "SEQUENCER_OT_strip_modifier_set_active", "", RNA_struct_ui_icon(ptr->type));
-  RNA_string_set(&active_op_ptr, "modifier", smd->name);
-
+  /* Type icon omitted. The modifier name is the label. */
+  ui::Layout *sub;
   ui::Layout &row = layout.row(true);
 
   /* Modifier Name.

@@ -584,12 +584,9 @@ void VKBackend::detect_workarounds(VKDevice &device)
   extensions.shader_clip_distance = device.physical_device_features_get().shaderClipDistance ==
                                     VK_TRUE;
 
-  /* During testing graphics pipeline library feature it was detected that it would crash on
-   * official AMD drivers.
-   */
-  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_OFFICIAL) &&
-      bool(G.debug & G_DEBUG_GPU))
-  {
+  /* Official AMD drivers crash when graphics pipeline libraries or dynamic vertex input are
+   * enabled, including when the features are unused. Keep them off so startup succeeds. */
+  if (GPU_type_matches(GPU_DEVICE_ATI, GPU_OS_ANY, GPU_DRIVER_OFFICIAL)) {
     extensions.graphics_pipeline_library = false;
     extensions.vertex_input_dynamic_state = false;
   }

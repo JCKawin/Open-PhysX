@@ -671,7 +671,9 @@ static const EnumPropertyItem prop_shader_output_target_items[] = {
      "All",
      "Use shaders for all renderers and viewports, unless there exists a more specific output"},
     {SHD_OUTPUT_EEVEE, "EEVEE", 0, "EEVEE", "Use shaders for EEVEE renderer"},
+#ifdef WITH_CYCLES
     {SHD_OUTPUT_CYCLES, "CYCLES", 0, "Cycles", "Use shaders for Cycles renderer"},
+#endif
     {0, nullptr, 0, nullptr, nullptr},
 };
 

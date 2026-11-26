@@ -14,6 +14,7 @@
 #include "BKE_context.hh"
 #include "BKE_library.hh"
 #include "BKE_modifier.hh"
+#include "BKE_object.hh"
 #include "BKE_screen.hh"
 
 #include "DNA_object_types.h"
@@ -312,6 +313,13 @@ static void modifier_ops_extra_draw(bContext *C, ui::Layout *layout, void *md_v)
   }
 }
 
+static void modifier_active_func(bContext *C, void *ob_v, void *md_v)
+{
+  Object *ob = static_cast<Object *>(ob_v);
+  BKE_object_modifier_set_active(ob, static_cast<ModifierData *>(md_v));
+  WM_event_add_notifier(C, NC_OBJECT | ND_MODIFIER, ob);
+}
+
 static void modifier_panel_header(const bContext *C, Panel *panel)
 {
   ui::Layout *sub;
@@ -328,14 +336,8 @@ static void modifier_panel_header(const bContext *C, Panel *panel)
   Scene *scene = CTX_data_scene(C);
   int index = BLI_findindex(&ob->modifiers, md);
 
-  /* Modifier Icon. */
-  sub = &layout.row(true);
-  sub->emboss_set(ui::EmbossType::None);
-  if (mti->is_disabled && mti->is_disabled(scene, md, false)) {
-    sub->red_alert_set(true);
-  }
-  PointerRNA op_ptr = sub->op("OBJECT_OT_modifier_set_active", "", RNA_struct_ui_icon(ptr->type));
-  RNA_string_set(&op_ptr, "modifier", md->name);
+  /* Clicking the name or a header toggle selects this modifier. The type icon is omitted. */
+  ui::block_func_set(layout.block(), modifier_active_func, ob, md);
 
   ui::Layout &row = layout.row(true);
 
@@ -343,6 +345,9 @@ static void modifier_panel_header(const bContext *C, Panel *panel)
    * Count how many buttons are added to the header to check if there is enough space. */
   int buttons_number = 0;
   ui::Layout &name_row = row.row(true);
+  if (mti->is_disabled && mti->is_disabled(scene, md, false)) {
+    name_row.red_alert_set(true);
+  }
 
   /* Display mode switching buttons. */
   if (ob->type == OB_MESH) {

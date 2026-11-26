@@ -756,6 +756,10 @@ if(WITH_INPUT_IME)
   add_definitions(-DWITH_INPUT_IME)
 endif()
 
+if(WITH_CYCLES)
+  add_definitions(-DWITH_CYCLES)
+endif()
+
 # # Warnings as errors, this is too strict!
 # if(MSVC)
 #    string(APPEND CMAKE_C_FLAGS " /WX")

@@ -18,6 +18,7 @@
 #include "MEM_guardedalloc.h"
 
 #include "DNA_brush_types.h"
+#include "DNA_node_types.h"
 #include "DNA_scene_types.h"
 #include "DNA_screen_types.h"
 #include "DNA_space_types.h"
@@ -57,6 +58,7 @@
 #include "BKE_library.hh"
 #include "BKE_main.hh"
 #include "BKE_main_idmap.hh"
+#include "BKE_node_legacy_types.hh"
 #include "BKE_main_namemap.hh"
 #include "BKE_preferences.h"
 #include "BKE_report.hh"
@@ -909,6 +911,38 @@ static void wm_data_consistency_ensure(wmWindowManager *curwm,
   }
 }
 
+#ifndef WITH_CYCLES
+/** Drop Cycles from files loaded by a build that does not include the engine. */
+static void blendfile_disable_cycles(Main *bmain)
+{
+  for (Scene &scene : bmain->scenes) {
+    if (STREQ(scene.r.engine, RE_engine_id_CYCLES)) {
+      STRNCPY_UTF8(scene.r.engine, RE_engine_id_BLENDER_EEVEE);
+    }
+  }
+
+  for (bNodeTree &ntree : bmain->nodetrees) {
+    if (!STREQ(ntree.idname, "ShaderNodeTree")) {
+      continue;
+    }
+    for (bNode &node : ntree.nodes) {
+      if (!ELEM(node.type_legacy,
+                SH_NODE_OUTPUT_MATERIAL,
+                SH_NODE_OUTPUT_WORLD,
+                SH_NODE_OUTPUT_LIGHT,
+                SH_NODE_OUTPUT_LINESTYLE))
+      {
+        continue;
+      }
+      /* Keep the node, but stop targeting the missing renderer. ALL still feeds EEVEE. */
+      if (node.custom1 == SHD_OUTPUT_CYCLES) {
+        node.custom1 = SHD_OUTPUT_ALL;
+      }
+    }
+  }
+}
+#endif
+
 /**
  * This function runs after loading blend-file data and is responsible
  * for setting up the context (the active view-layer, scene & work-space).
@@ -1208,6 +1242,10 @@ static void setup_app_data(bContext *C,
      * (versioning done in file reading code only operates on a per-library basis). */
     BLO_read_do_version_after_setup(bmain, nullptr, reports);
   }
+
+#ifndef WITH_CYCLES
+  blendfile_disable_cycles(bmain);
+#endif
 
   /* Always clear readfile runtime data, keeping this beyond the readfile scope can have unexpected
    * side-effects, especially on next readfile call when considering IDs from the old Main

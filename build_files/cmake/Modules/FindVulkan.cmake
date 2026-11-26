@@ -38,6 +38,7 @@ find_path(VULKAN_INCLUDE_DIR
 find_library(VULKAN_LIBRARY
   NAMES
     vulkan
+    vulkan-1
   HINTS
     ${_vulkan_SEARCH_DIRS}
   PATH_SUFFIXES

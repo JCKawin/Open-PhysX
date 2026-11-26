@@ -557,7 +557,7 @@ struct GHOST_InstanceVK {
   }
 
   bool create_device(const bool use_vk_ext_swapchain_maintenance1,
-                     const bool is_debug,
+                     const bool /*is_debug*/,
                      blender::Span<const char *> required_device_extensions,
                      blender::Span<const char *> optional_device_extensions)
   {
@@ -581,7 +581,9 @@ struct GHOST_InstanceVK {
                                    VK_DRIVER_ID_AMD_PROPRIETARY ||
                                device.device_driver_properties.driverID ==
                                    VK_DRIVER_ID_AMD_OPEN_SOURCE;
-    if (is_amd_driver && is_debug) {
+    /* Official AMD drivers crash when these extensions are enabled, including when they are
+     * unused. Keep them off so the Vulkan backend can start on AMD (for example RX 7600S). */
+    if (is_amd_driver) {
       device.extensions.disable(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
       device.extensions.disable(VK_EXT_GRAPHICS_PIPELINE_LIBRARY_EXTENSION_NAME);
       device.extensions.disable(VK_EXT_VERTEX_INPUT_DYNAMIC_STATE_EXTENSION_NAME);

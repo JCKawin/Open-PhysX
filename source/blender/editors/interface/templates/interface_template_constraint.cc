@@ -114,16 +114,11 @@ static void draw_constraint_header(Layout &layout, Object *ob, bConstraint *con)
     layout.context_ptr_set("constraint", &ptr);
   }
 
-  /* Constraint type icon. */
-  Layout *row = &layout.row(false);
-  row->emboss_set(EmbossType::Emboss);
-  row->red_alert_set(con->flag & CONSTRAINT_DISABLE);
-  row->label("", RNA_struct_ui_icon(ptr.type));
-
+  /* Type icon omitted. A disabled constraint tints the name instead. */
   block_emboss_set(block, EmbossType::Emboss);
 
-  row = &layout.row(true);
-
+  Layout *row = &layout.row(true);
+  row->red_alert_set(con->flag & CONSTRAINT_DISABLE);
   row->prop(&ptr, "name", UI_ITEM_NONE, "", ICON_NONE);
 
   /* Enabled eye icon. */

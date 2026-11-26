@@ -732,21 +732,23 @@ class USERPREF_PT_system_sound(SystemPanel, CenterAlignMixIn, Panel):
 class USERPREF_PT_system_cycles_devices(SystemPanel, CenterAlignMixIn, Panel):
     bl_label = "Cycles Render Devices"
 
+    @classmethod
+    def poll(cls, _context):
+        # This build does not ship Cycles. Hide the panel instead of advertising it.
+        return bpy.app.build_options.cycles
+
     def draw_centered(self, context, layout):
         prefs = context.preferences
 
         col = layout.column()
         col.use_property_split = False
 
-        if bpy.app.build_options.cycles:
-            addon = prefs.addons.get("cycles")
-            if addon is None:
-                layout.label(text="Enable Cycles Render Engine add-on to use Cycles", icon='STATUS_INFO')
-            else:
-                addon.preferences.draw_impl(col, context)
-            del addon
+        addon = prefs.addons.get("cycles")
+        if addon is None:
+            layout.label(text="Enable Cycles Render Engine add-on to use Cycles", icon='STATUS_INFO')
         else:
-            layout.label(text="Cycles is disabled in this build", icon='STATUS_INFO')
+            addon.preferences.draw_impl(col, context)
+        del addon
 
 
 class USERPREF_PT_system_display_graphics(SystemPanel, CenterAlignMixIn, Panel):

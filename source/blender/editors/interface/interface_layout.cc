@@ -1396,6 +1396,21 @@ static void item_disabled(Layout *layout, const char *name)
 }
 
 /**
+ * Modifier, constraint, and effect add buttons already show the tool name.
+ * The type logo next to that name is noise, so those operators draw as text.
+ */
+static bool tool_button_hides_type_icon(const wmOperatorType *ot)
+{
+  if (ot == nullptr) {
+    return false;
+  }
+  const StringRef id(ot->idname);
+  return id.endswith("modifier_add") || id.endswith("modifier_add_node_group") ||
+         id.endswith("constraint_add") || id.endswith("constraint_add_with_targets") ||
+         id.endswith("shaderfx_add") || id == "RIGIDBODY_OT_object_add";
+}
+
+/**
  * Operator Item
  * \param r_opptr: Optional, initialize with operator properties when not nullptr.
  * Will always be written to even in the case of errors.
@@ -1422,7 +1437,10 @@ static Button *uiItemFullO_ptr_ex(Layout *layout,
     }
   }
 
-  if (layout->root()->type == LayoutType::Menu && !icon) {
+  if (tool_button_hides_type_icon(ot)) {
+    icon = ICON_NONE;
+  }
+  else if (layout->root()->type == LayoutType::Menu && !icon) {
     icon = ICON_BLANK1;
   }
 

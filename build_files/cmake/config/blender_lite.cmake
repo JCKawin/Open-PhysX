@@ -18,6 +18,9 @@ set(WITH_BULLET              OFF CACHE BOOL "" FORCE)
 set(WITH_CODEC_FFMPEG        OFF CACHE BOOL "" FORCE)
 set(WITH_CODEC_SNDFILE       OFF CACHE BOOL "" FORCE)
 set(WITH_CYCLES              OFF CACHE BOOL "" FORCE)
+# Windows x64 defaults to the Vulkan GPU backend. The loader is the UCRT64
+# vulkan-1 import library; headers come from mingw-w64-ucrt-x86_64-vulkan-headers.
+set(WITH_VULKAN_BACKEND      ON CACHE BOOL "" FORCE)
 set(WITH_DRACO               OFF CACHE BOOL "" FORCE)
 set(WITH_MESHOPTIMIZER       OFF CACHE BOOL "" FORCE)
 set(WITH_FFTW3               OFF CACHE BOOL "" FORCE)

@@ -165,15 +165,11 @@ static void shaderfx_panel_header(const bContext * /*C*/, Panel *panel)
 
   block_lock_set(layout.block(), (ob && !ID_IS_EDITABLE(ob)), ERROR_LIBDATA_MESSAGE);
 
-  /* Effect type icon. */
-  ui::Layout *row = &layout.row(false);
+  /* Type icon omitted. A broken effect tints the name instead. */
+  ui::Layout *row = &layout.row(true);
   if (fxti->is_disabled && fxti->is_disabled(fx, false)) {
     row->red_alert_set(true);
   }
-  row->label("", RNA_struct_ui_icon(ptr->type));
-
-  /* Effect name. */
-  row = &layout.row(true);
   if (!narrow_panel) {
     row->prop(ptr, "name", UI_ITEM_NONE, "", ICON_NONE);
   }

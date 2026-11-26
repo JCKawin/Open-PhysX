@@ -44,7 +44,8 @@ def object_light_shader_nodes_poll(context):
 
 
 def cycles_shader_nodes_poll(context):
-    return context.engine == 'CYCLES'
+    import bpy
+    return bpy.app.build_options.cycles and context.engine == 'CYCLES'
 
 
 def eevee_shader_nodes_poll(context):
