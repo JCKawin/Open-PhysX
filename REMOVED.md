@@ -105,3 +105,19 @@ Deleted `extern/quadriflow/` (including the bundled LEMON library) and `intern/q
 `WITH_QUADRIFLOW` stays off. Those trees are no longer CMake subdirectories, and `bf_blenkernel` no longer links `bf_intern_quadriflow`. `OBJECT_OT_quadriflow_remesh` is gone, along with `BKE_mesh_remesh_quadriflow`. The mesh data properties panel no longer offers a Quad mode; it only shows Voxel Remesh. `REMESH_QUAD` stays in DNA and in the RNA enum so an old file that stored that mode still loads. `WM_JOB_TYPE_QUADRIFLOW_REMESH` stays in the job-type enum so later values do not shift. Voxel remesh is unchanged.
 
 Rebuild: 38 Ninja steps, 52 seconds. `open-physx.exe` linked. The previous USD rebuild was 215 steps and 48 seconds.
+
+## Compositor — Stage A
+
+Unregistered the compositor from the UI and from node-type registration. No implementation files were deleted. DNA structs stay, including compositor node storage, scene effects, and `CompositorNodeTree`.
+
+- `register_compositor_nodes()` is no longer called. The compositor node-tree type stays registered so stored trees still have an idname. Its `poll` returns false, so the node editor does not offer Compositor as a tree type.
+- `ED_operatortypes_scene_compositor` and `ED_menutypes_scene_compositor` are no longer called. `NODE_OT_duplicate_compositing_node_group` is gone because it called one of those operators.
+- `bl_ui` no longer loads `node_add_menu_compositor` or `properties_compositor`. The properties editor no longer has the Compositor & Effects tab. The EEVEE compositor performance panels are not registered. The node Add and Swap menus no longer insert the compositor catalogs.
+
+`bNodeType::is_type` used to assert that the queried idname was registered. Shader and geometry trees call it with `CompositorNodeOutputFile` and `CompositorNodeViewer` on every tree update, so leaving the compositor types unregistered aborted in `BKE_materials_init`. The assert was removed. The idname compare stays.
+
+Factory startup (`--background --factory-startup`) exits 0. `SCENE_OT_add_compositor_effect` and `NODE_MT_compositor_node_add_all` are absent. `CompositorNodeTree` RNA is still there.
+
+Stage B is not done. `source/blender/compositor/`, `source/blender/nodes/composite/`, the draw compositor engine, `render/intern/compositor.cc`, and the sequencer compositor effect still reference that code. Deleting those files would touch far more than the call sites that can be stubbed in one pass.
+
+Rebuild after the header change: 407 Ninja steps, 409 seconds. `open-physx.exe` linked. The unregister itself, before the `is_type` edit, was 10 steps and 20 seconds. The previous QuadriFlow rebuild was 38 steps and 52 seconds.

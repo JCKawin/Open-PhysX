@@ -1341,8 +1341,8 @@ const bNodeZoneType *zone_type_by_node_type(const int node_type);
 
 inline bool bNodeType::is_type(const UString query_idname) const
 {
-  /* Ensure that the given idname exists to check for typos. */
-  BLI_assert(node_type_find(query_idname) != nullptr);
+  /* Do not require the queried idname to be registered. Compositor node types are
+   * unregistered, and shader trees still call is_type() with those names. */
   return this->idname == query_idname;
 }
 

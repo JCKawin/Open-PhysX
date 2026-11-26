@@ -1226,9 +1226,6 @@ classes = (
     RENDER_PT_eevee_performance,
     RENDER_PT_eevee_performance_memory,
     RENDER_PT_eevee_performance_viewport,
-    RENDER_PT_eevee_performance_compositor,
-    RENDER_PT_eevee_performance_compositor_denoise_settings,
-
 
     RENDER_PT_gpencil,
     RENDER_PT_grease_pencil_viewport,

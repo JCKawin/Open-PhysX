@@ -168,6 +168,12 @@ static bool composite_validate_link(eNodeSocketDatatype from_type, eNodeSocketDa
 
 bke::bNodeTreeType *ntreeType_Composite;
 
+static bool composite_tree_poll(const bContext * /*C*/, bke::bNodeTreeType * /*ntreetype*/)
+{
+  /* Hidden from the node editor. The type stays registered so stored trees still load. */
+  return false;
+}
+
 void register_node_tree_type_cmp()
 {
   bke::bNodeTreeType *tt = ntreeType_Composite = MEM_new<bke::bNodeTreeType>(__func__);
@@ -179,6 +185,7 @@ void register_node_tree_type_cmp()
   tt->ui_icon = ICON_NODE_COMPOSITING;
   tt->ui_description = N_("Create effects and post-process renders, images, and the 3D Viewport");
   tt->asset_catalog_path_prefix = "Compositing";
+  tt->poll = composite_tree_poll;
 
   tt->foreach_nodeclass = foreach_nodeclass;
   tt->update = update;

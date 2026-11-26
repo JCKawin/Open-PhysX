@@ -327,8 +327,6 @@ class NODE_MT_add(node_add_menu.AddNodeMenu):
         snode = context.space_data
         if snode.tree_type == 'GeometryNodeTree':
             layout.menu_contents("NODE_MT_geometry_node_add_all")
-        elif snode.tree_type == 'CompositorNodeTree':
-            layout.menu_contents("NODE_MT_compositor_node_add_all")
         elif snode.tree_type == 'ShaderNodeTree':
             layout.menu_contents("NODE_MT_shader_node_add_all")
         elif snode.tree_type == 'TextureNodeTree':
@@ -357,8 +355,6 @@ class NODE_MT_swap(node_add_menu.SwapNodeMenu):
         snode = context.space_data
         if snode.tree_type == 'GeometryNodeTree':
             layout.menu_contents("NODE_MT_geometry_node_swap_all")
-        elif snode.tree_type == 'CompositorNodeTree':
-            layout.menu_contents("NODE_MT_compositor_node_swap_all")
         elif snode.tree_type == 'ShaderNodeTree':
             layout.menu_contents("NODE_MT_shader_node_swap_all")
         elif snode.tree_type == 'TextureNodeTree':
