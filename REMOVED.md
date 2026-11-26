@@ -59,3 +59,19 @@ Files touched: `build_files/cmake/config/blender_lite.cmake`, `build_files/cmake
 Build: `ninja blender` in `build-gcc` succeeded. Turning ccache on changed every compile command, so this was a full rebuild: 6581 steps, 1949 seconds. No earlier full-build time was recorded, so there is no before/after comparison yet. A later incremental build is the one that should get faster. No source lines were deleted in this tier.
 
 Smoke test (`--background`): default cube present, sculpt mode entered, fluid domain baked (`Bake Data complete`, 0.05s, 16 resolution, 2 frames), file saved and reloaded with the fluid modifier still there. `bpy.app.build_options.cycles` is false, `fluid` is true, render engine is EEVEE. The console still prints the existing "Bundled Python not found" notice because `WITH_PYTHON_INSTALL` is off and Python comes from UCRT64. The script itself raised no Python exception.
+
+## Tier 2 — Cycles
+
+Deleted `intern/cycles/` and `scripts/presets/cycles/`. About 246,900 lines.
+
+`extern/libmv` does not exist. Cycles lived only under `intern/cycles`. The add-on was inside that tree (`intern/cycles/blender/addon`), not under `scripts/addons_core`.
+
+CMake references removed, all of them already behind `if(WITH_CYCLES)` except one include path:
+
+- `intern/CMakeLists.txt` no longer adds the cycles subdirectory.
+- `CMakeLists.txt` no longer adds it for the standalone/Hydra branch.
+- Include and link lines removed from `source/creator/CMakeLists.txt`, `source/blender/python/intern/CMakeLists.txt`, `source/blender/editors/render/CMakeLists.txt`, and `source/blender/makesrna/intern/CMakeLists.txt`. makesrna listed `intern/cycles/blender` even when Cycles was off.
+
+`#include "CCL_api.h"` stays inside `#ifdef WITH_CYCLES` in `creator.cc`, `bpy_interface.cc`, and `render_texture_cache.cc`. The option `WITH_CYCLES` still exists and is off. Turning it on will not configure until the sources are restored.
+
+Rebuild after the deletion: 196 Ninja steps, 33 seconds, `open-physx.exe` linked. The same smoke test passed again.

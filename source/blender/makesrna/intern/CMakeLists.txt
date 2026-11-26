@@ -268,7 +268,6 @@ set(INC
   ../../editors/include
   ../../render
   ../../../../intern/clog
-  ../../../../intern/cycles/blender
   ../../../../intern/memutil
   ../../../../intern/mantaflow/extern
 
@@ -280,10 +279,6 @@ set(INC
 
 set(INC_SYS
 )
-
-if(WITH_CYCLES)
-  add_definitions(-DWITH_CYCLES)
-endif()
 
 if(WITH_PYTHON)
   add_definitions(-DWITH_PYTHON)

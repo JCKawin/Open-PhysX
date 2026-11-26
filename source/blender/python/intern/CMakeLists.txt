@@ -202,16 +202,6 @@ if(WITH_CODEC_SNDFILE)
   add_definitions(-DWITH_SNDFILE)
 endif()
 
-if(WITH_CYCLES)
-  list(APPEND INC
-    ../../../../intern/cycles/blender
-  )
-  list(APPEND LIB
-    bf_intern_cycles
-  )
-  add_definitions(-DWITH_CYCLES)
-endif()
-
 if(WITH_CYCLES_OSL)
   add_definitions(-DWITH_CYCLES_OSL)
 endif()

@@ -52,11 +52,6 @@ if(WITH_LIBMV)
   add_definitions(-DWITH_LIBMV)
 endif()
 
-if(WITH_CYCLES)
-  add_definitions(-DWITH_CYCLES)
-  list(APPEND INC ../../intern/cycles/blender)
-endif()
-
 if(WITH_OPENGL_BACKEND)
   add_definitions(-DWITH_OPENGL_BACKEND)
 endif()

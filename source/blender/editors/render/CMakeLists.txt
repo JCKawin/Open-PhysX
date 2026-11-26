@@ -62,11 +62,6 @@ if(WITH_FREESTYLE)
   add_definitions(-DWITH_FREESTYLE)
 endif()
 
-if(WITH_CYCLES)
-  add_definitions(-DWITH_CYCLES)
-  list(APPEND INC ../../../../intern/cycles/blender)
-endif()
-
 blender_add_lib(bf_editor_render "${SRC}" "${INC}" "${INC_SYS}" "${LIB}")
 
 # RNA_prototypes.hh

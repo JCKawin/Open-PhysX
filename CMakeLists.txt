@@ -2482,7 +2482,6 @@ elseif(WITH_CYCLES_STANDALONE OR WITH_CYCLES_HYDRA_RENDER_DELEGATE)
   add_subdirectory(intern/libc_compat)
   add_subdirectory(intern/sky)
 
-  add_subdirectory(intern/cycles)
   if(WITH_CUDA_DYNLOAD)
     add_subdirectory(extern/cuew)
   endif()
